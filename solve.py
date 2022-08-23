@@ -7,8 +7,9 @@ HEIGHT, WIDTH = 3, 3
 SIZE = WIDTH * HEIGHT
 
 s = Solver()
+
 grid = [[Bool(f'cell_{r}_{c}') for c in range(HEIGHT)] for r in range(WIDTH)]
-adjacency = [[Bool(f'adjacency_{r}_{c}') for c in range(SIZE)] for r in range(SIZE)]
+adjacency = [[[Int(f'adjacency_{k}_{r}_{c}') for c in range(SIZE)] for r in range(SIZE)] for k in range(0, SIZE-2)]
 # numbers = [ [Int(f'number_{r}_{c}') for c in range(HEIGHT)] for r in range(WIDTH) ]
 
 
@@ -62,6 +63,26 @@ def dot(A, B):
     n = len(A[0])
     return [[g(i, j) for i in range(n)] for j in range(n)]
 
+
+
+# constrain adjacency 3d matrix
+
+# regular Adjacency matrix defined to be 1 when cells i and j in grid are shaded and connected, otherwise 0
+k=0
+for i in range(SIZE):
+    for j in range(SIZE):
+        (x1, y1) = (i % WIDTH, i // WIDTH)
+        (x2, y2) = (j % WIDTH, j // WIDTH)
+        s.add(adjacency[k][i][j] == And([grid[i]]))
+for x in range(WIDTH):
+    for y in range(HEIGHT-1):
+        s.add( And( [ grid[x][y], grid[x][y+1] ] ) == adjacency[k][x][y])
+for x in range(WIDTH - 1):
+    for y in range(HEIGHT):
+        s.add(And([grid[x][y + 1], grid[x][y]]) == adjacency[k][x][y])
+
+for k in range(1, len(adjacency)):
+    s.add(adjacency[k])
 
 # Aks is an accumulated list of A^k for all k in [1 .. SIZE-1]
 # such that Aks[i] = A^(i+1)
