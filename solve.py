@@ -1,4 +1,3 @@
-#!/usr/bin/env -S python
 import logging
 from z3 import *
 from tools import *
@@ -43,11 +42,12 @@ logging.debug(f"{time() - t:f} seconds")
 shape = (SIZE - 2, SIZE, SIZE)
 adjacency_k = np.empty(shape, dtype=ExprRef)
 for index in np.ndindex(*adjacency_k.shape):
-    adjacency_k[index] = Bool(f"adjacency_{'_'.join(str(v) for v in index)}")
+    adjacency_k[index] = z3.Bool(f"adjacency_{'_'.join(str(v) for v in index)}")  # adjacency z3 type defined here
+    # feel free to change it between z3.Bool and z3.Int and see what happens
 
 logging.debug("constructing: adjacency matrix")
 t0 = time()
-# The Adjacency Matrix (tam) defined to be 1 when cells i and j in grid are shaded and connected, otherwise 0
+# the adjacency matrix adjacency[0][i][j] equals 1 when cell#i and cell#j in grid are shaded and connected, otherwise 0
 for x in range(WIDTH):
     for y in range(HEIGHT - 1):
         x1, y1 = x, y

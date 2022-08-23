@@ -1,11 +1,10 @@
 from z3 import If, And, Or, Not, BoolRef, Int, sat, is_true
 
+# implement python operators for some z3 objects
 BoolRef.__radd__ = lambda self, other: self + other
 BoolRef.__add__ = lambda self, other: And(self, other)
 BoolRef.__rmul__ = lambda self, other: self * other
 BoolRef.__mul__ = lambda self, other: Or(self, other)
-Int.__bool__ = lambda self: Not(self == 0)
-BoolRef.__bool__ = lambda self: is_true(self)
 
 
 def coordinate_l(width):
