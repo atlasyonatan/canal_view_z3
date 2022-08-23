@@ -55,13 +55,13 @@ for x in range(WIDTH):
         i = cell_number(x1, y1)
         j = cell_number(x2, y2)
         both_shaded = And(grid[x][y], grid[x][y + 1])
-        adjacency_k[0][i][j] = both_shaded  # z3bool_to_int(both_shaded)
+        adjacency_k[0][i][j] = both_shaded
 for x in range(WIDTH - 1):
     for y in range(HEIGHT):
         i = cell_number(x, y)
         j = cell_number(x + 1, y)
         both_shaded = And(grid[x][y], grid[x + 1][y])
-        adjacency_k[0][i][j] = both_shaded  # z3bool_to_int(both_shaded)
+        adjacency_k[0][i][j] = both_shaded
 logging.debug(f"{time() - t:f} seconds")
 
 logging.debug("constructing: adjacency_k")
