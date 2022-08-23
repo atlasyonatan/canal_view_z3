@@ -1,9 +1,10 @@
 #!/usr/bin/env -S python
-import operator
 import logging
 from z3 import *
 from tools import *
 from time import time
+from itertools import islice
+import numpy as np
 
 logging.basicConfig(level=logging.DEBUG)
 
@@ -17,25 +18,10 @@ s = Solver()
 logging.debug("defining value spaces")
 t0 = time()
 grid = [[Bool(f'cell_{r}_{c}') for c in range(HEIGHT)] for r in range(WIDTH)]
-adjacency = [[[Int(f'adjacency_{k}_{i}_{j}') for j in range(SIZE)] for i in range(SIZE)] for k in range(0, SIZE - 2)]
+# adjacency = [[Bool(f'adjacency_{i}_{j}') for j in range(SIZE)] for i in range(SIZE)]
 # numbers = [ [Int(f'number_{r}_{c}') for c in range(HEIGHT)] for r in range(WIDTH) ]
 t1 = time()
-logging.debug(f"{t1-t0:f} seconds")
-
-logging.debug("constraining: adjacency int range")
-t0 = time()
-# limit adjacency z3.Int range
-for Ak in adjacency:
-    for Aki in Ak:
-        for Akij in Aki:
-            s.add(And(Akij >= 0, Akij <= SIZE))
-t1 = time()
-logging.debug(f"{t1-t0:f} seconds")
-
-# for x in range(0, WIDTH):
-#    for y in range(0, HEIGHT):
-#        # a cell with a number can't be shaded
-#        s.add( Implies(numbers[x][y] > 0, grid[x][y] == False) )
+logging.debug(f"{t1 - t0:f} seconds")
 
 logging.debug("constraining: no 2x2 shaded")
 t0 = time()
@@ -44,116 +30,105 @@ for x in range(0, WIDTH - 1):
     for y in range(0, HEIGHT - 1):
         s.add(Not(And([grid[x][y], grid[x][y + 1], grid[x + 1][y], grid[x + 1][y + 1]])))
 t1 = time()
-logging.debug(f"{t1-t0:f} seconds")
+logging.debug(f"{t1 - t0:f} seconds")
 
+# shape = (SIZE - 2, SIZE, SIZE)
+# adjacency_k = np.empty(shape, dtype=ExprRef)
+# for index in np.ndindex(*adjacency_k.shape):
+#     adjacency_k[index] = Bool(f"adjacency_{'_'.join(str(v) for v in index)}")
 
-def manhatten(x1, y1, x2, y2):
-    return abs(x2 - x1) + abs(y2 - y1)
+# logging.debug("constructing: adjacency_k")
+# t0 = time()
+# # The Adjacency Matrix (tam) defined to be 1 when cells i and j in grid are shaded and connected, otherwise 0
+# for x in range(WIDTH):
+#     for y in range(HEIGHT - 1):
+#         x1, y1 = x, y
+#         x2, y2 = x, y + 1
+#         i = cell_number(x1, y1)
+#         j = cell_number(x2, y2)
+#         both_shaded = And(grid[x][y], grid[x][y + 1])
+#         adjacency_k[0][i][j] = both_shaded  # z3bool_to_int(both_shaded)
+# for x in range(WIDTH - 1):
+#     for y in range(HEIGHT):
+#         i = cell_number(x, y)
+#         j = cell_number(x + 1, y)
+#         both_shaded = And(grid[x][y], grid[x + 1][y])
+#         adjacency_k[0][i][j] = both_shaded  # z3bool_to_int(both_shaded)
+# t1 = time()
+# logging.debug(f"{t1 - t0:f} seconds")
 
+# logging.debug("constructing: adjacency_k")
+# t0 = time()
+# # powers of The Adjacency Matrix
+# for k in range(1, adjacency_k.shape[0]):
+#     adjacency_k[k] = adjacency_k[0] * adjacency_k[k - 1]  # dot product
+# t1 = time()
+# logging.debug(f"{t1 - t0:f} seconds")
 
-def get_neighbours(x, y):
-    n = []
-    if x > 0:
-        n.append((x - 1, y))
-    if x < WIDTH - 1:
-        n.append((x + 1, y))
-    if y > 0:
-        n.append((x, y - 1))
-    if y < HEIGHT - 1:
-        n.append((x, y + 1))
-    return n
+# logging.debug("constructing: sum_adjacency_k")
+# t0 = time()
+# # matrix for the sum of all adjacency^k
+# adjacency_k_sum = np.ndarray.sum(adjacency_k, axis=0)
+# t1 = time()
+# logging.debug(f"{t1 - t0:f} seconds")
 
+# logging.debug("constraining: sum of adjacency^k is nonzero for shaded cell pairs")
+# t0 = time()
+# # constrain the sum of adjacency^k for k in [1..SIZE-1], is positive for all shaded cells
+# for i in range(SIZE):
+#     for j in range(SIZE):
+#         x1, y1 = coordinate(i)
+#         x2, y2 = coordinate(j)
+#         shaded = And(grid[x1][y1], grid[x2][y2])
+#         s.add(shaded == adjacency_k_sum[i][j])
+# t1 = time()
+# logging.debug(f"{t1 - t0:f} seconds")
 
-# for x1 in range(0, WIDTH):
-#    for y1 in range(0, HEIGHT):
-#         for x2 in range(0, WIDTH):
-#            for y2 in range(0, HEIGHT):
-#                # self is minimum distance, make no constraints
-#                if x1 == x2 and y1 == y2:
-#                    continue
+# logging.debug("constraining: constants")
+# t0 = time()
 #
-#                dist = manhatten(x1, y1, x2, y2)
-#                conditions = [And(grid[x][y], dist > manhatten(x1, y1, x, y)) for (x, y) in get_neighbours(x2, y2)]
-#                s.add(Implies(And([grid[x1][y1], grid[x2][y2]]), Or(conditions)))
-
-
-# def dot(A, B):
-#     g = dot_generator(A, B)
-#     n = len(A[0])
-#     return [[g(i, j) for i in range(n)] for j in range(n)]
-
-
-# constrain adjacency 3d matrix where adjacency[k] is equal to
-
-logging.debug("constraining: adjacency matrix of grid")
-t0 = time()
-# regular Adjacency matrix defined to be 1 when cells i and j in grid are shaded and connected, otherwise 0
-k = 0
-for x in range(WIDTH):
-    for y in range(HEIGHT - 1):
-        x1, y1 = x, y
-        x2, y2 = x, y + 1
-        i = cell_number(x1, y1)
-        j = cell_number(x2, y2)
-        s.add(adjacency[k][i][j] == If(And(grid[x][y], grid[x][y + 1]), 1, 0))
-for x in range(WIDTH - 1):
-    for y in range(HEIGHT):
-        i = cell_number(x, y)
-        j = cell_number(x + 1, y)
-        s.add(adjacency[k][i][j] == If(And(grid[x][y], grid[x + 1][y]), 1, 0))
-t1 = time()
-logging.debug(f"{t1-t0:f} seconds")
-
-logging.debug("constraining: adjacency^k")
-t0 = time()
-# powers of the adjacency matrix
-for k in range(1, len(adjacency)):
-    dot = dot_product_l(adjacency[0], adjacency[k - 1], z3.Sum, operator.mul)
-    for i in range(SIZE):
-        for j in range(SIZE):
-            s.add(adjacency[k][i][j] == dot(i, j))
-t1 = time()
-logging.debug(f"{t1-t0:f} seconds")
-
-logging.debug("constraining: sum of adjacency^k is nonzero for shaded cell pairs")
-t0 = time()
-# constrain the sum of adjacency^k for k in [1..SIZE-1], is positive for all shaded cells
-for i in range(0, SIZE - 1):
-    for j in range(i + 1, SIZE):
-        x1, y1 = coordinate(i)
-        x2, y2 = coordinate(j)
-        shaded = And(grid[x1][y1], grid[x2][y2])
-        sum_of_adj_k = Sum([adjacency[k][i][j] for k in range(len(adjacency))])
-        non_zero = sum_of_adj_k != 0
-        s.add(Implies(shaded, non_zero))
-t1 = time()
-logging.debug(f"{t1-t0:f} seconds")
-
-logging.debug("constraining: constants")
-t0 = time()
-constant = [(0, 0), (2, 2), (0, 4)]
-for c in constant:
-    print(c, " will be shaded")
-    s.add(grid[c[0]][c[1]])
-t1 = time()
-logging.debug(f"{t1-t0:f} seconds")
+# for c in constant:
+#     print(c, " will be shaded")
+#     s.add(grid[c[0]][c[1]])
+# t1 = time()
+# logging.debug(f"{t1 - t0:f} seconds")
 
 logging.debug("checking sat")
 t0 = time()
 # are we SAT?
 sat_result = s.check()
 t1 = time()
-logging.debug(f"{t1-t0:f} seconds")
+logging.debug(f"{t1 - t0:f} seconds")
 
 if s.check() == unsat:
     print("We are not SAT D:")
     exit(1)
 
-m = s.model()
-print('x', ' '.join([str(x) for x in range(WIDTH)]))
-for x in range(WIDTH):
-    print(x, end=" ")
-    for y in range(HEIGHT):
-        print("#" if m.eval(grid[x][y]) else " ", end=" ")
+# hard set these coordinates
+constant_coordinates = [(0, 0), (2, 2), (0, 4)]
+for x, y in constant_coordinates:
+    s.add(grid[x][y])
+
+
+# free_terms = [[grid[x][y] for x in range(WIDTH) if (x, y) not in constant_coordinates] for y in range(HEIGHT)]
+
+
+def cell_display(b):
+    return '#' if b else ' '
+
+
+solutions = all_smt(s, [])
+for i, m in enumerate(islice(solutions, 4), start=1):
+    m: ModelRef
+
+
+    def eval_cell(x, y):
+        r = grid[x][y]
+        v = m.eval(r)
+        return v
+
+
+    print(f"Sat #{i}:")
+    mat_display(grid, lambda x, y: cell_display(eval_cell(x, y)))
     print()
 # print(m)
