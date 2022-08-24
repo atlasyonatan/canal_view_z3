@@ -7,7 +7,7 @@ import numpy as np
 
 logging.basicConfig(level=logging.DEBUG)
 
-SOLUTION_COUNT = 3
+SOLUTION_COUNT = 3  # None for all solutions
 HEIGHT, WIDTH = 5, 5
 SIZE = WIDTH * HEIGHT
 print(f"WIDTH = {WIDTH}, HEIGHT = {HEIGHT}")
@@ -41,6 +41,7 @@ for key, value in CONSTANTS.items():
     t = time()
     sat_result = s.check()
     logging.debug(f"{time() - t:f} seconds")
+
     if sat_result == unsat:
         print(f"This constraint: {constraint} causes an unsat D:")
         exit(1)
@@ -73,20 +74,19 @@ t0 = time()
 
 # powers of The Adjacency Matrix
 for k in range(1, adjacency.shape[0]):
-    dot = z3_bool_mat_mul(adjacency[0], adjacency[k - 1])
+    mat_mul = z3_bool_mat_mul(adjacency[0], adjacency[k - 1])
     for index in np.ndindex(*adjacency[k].shape):
-        adjacency[k][index] = dot(*index)
+        adjacency[k][index] = mat_mul(*index)
 logging.debug(f"{time() - t:f} seconds")
 
 logging.debug("constructing: sum_adjacency_k")
 t = time()
-# matrix for the sum of all adjacency^k
 
-# logging.debug(adjacency[0].shape)
-f = z3_bool_mat_sum(adjacency)
+# matrix for the sum of all adjacency^k
+mat_sum = z3_bool_mat_sum(adjacency)
 adjacency_k_sum = np.empty(adjacency[0].shape, dtype=ExprRef)
 for index in np.ndindex(*adjacency_k_sum.shape):
-    adjacency_k_sum[index] = f(*index)
+    adjacency_k_sum[index] = mat_sum(*index)
 logging.debug(f"{time() - t:f} seconds")
 
 logging.debug("constraining: sum of adjacency^k is nonzero for shaded cell pairs")
@@ -133,6 +133,7 @@ for i, m in enumerate(s, start=1):
     # eval_adjacency_k_sum = evaluate(adjacency_k_sum)
     # print(f"adjacency_k_sum:")
     # mat_display(eval_adjacency_k_sum, bool_display)
+
     print()
 if not next(solutions, None):
     print("No more solutions")
