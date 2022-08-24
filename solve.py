@@ -5,18 +5,18 @@ from time import time
 from itertools import islice
 import numpy as np
 
-# logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=logging.DEBUG)
 
-SOLUTION_COUNT = 1
-HEIGHT, WIDTH = 3, 3
+SOLUTION_COUNT = 3
+HEIGHT, WIDTH = 5, 5
 SIZE = WIDTH * HEIGHT
 print(f"WIDTH = {WIDTH}, HEIGHT = {HEIGHT}")
 coordinate, cell_number = coordinate_l(WIDTH), cell_number_l(WIDTH)
 
 CONSTANTS = {
     (0, 0): True,
-    (1, 0): True,
-    (2, 0): True,
+    (2, 2): True,
+    (0, 4): True,
 }
 
 s = Solver()
@@ -26,15 +26,11 @@ t = time()
 grid = np.empty((WIDTH, HEIGHT), dtype=ExprRef)
 for index in np.ndindex(*grid.shape):
     grid[index] = Bool(f"cell_{'_'.join(str(v) for v in index)}")
-# grid = [[Bool(f'cell_{r}_{c}') for c in range(HEIGHT)] for r in range(WIDTH)]
-# adjacency = [[Bool(f'adjacency_{i}_{j}') for j in range(SIZE)] for i in range(SIZE)]
-# numbers = [ [Int(f'number_{r}_{c}') for c in range(HEIGHT)] for r in range(WIDTH) ]
 logging.debug(f"{time() - t:f} seconds")
 
 logging.debug("constraining: constants")
 # hard set these coordinates
 for key, value in CONSTANTS.items():
-    s.push()
     t = time()
     constraint = f"'{key} == {value}'"
     logging.debug(f"constraining: {constraint}")
@@ -43,10 +39,8 @@ for key, value in CONSTANTS.items():
 
     logging.debug("checking sat")
     t = time()
-    # are we SAT?
     sat_result = s.check()
     logging.debug(f"{time() - t:f} seconds")
-
     if sat_result == unsat:
         print(f"This constraint: {constraint} causes an unsat D:")
         exit(1)
@@ -67,40 +61,44 @@ t0 = time()
 for index in np.ndindex(*adjacency[0].shape):
     i, j = index
     d = abs(i - j)
-    connected = d == 1 or d == WIDTH or d == 0
-    if connected:
-        mark = And(grid[coordinate(i)], grid[coordinate(j)])
+    cardinal_neighbors = d == 0 or d == WIDTH or (d == 1 and not abs(i % WIDTH - j % WIDTH) != 1)
+    if cardinal_neighbors:
+        adjacency[0][i][j] = And(grid[coordinate(i)], grid[coordinate(j)])
     else:
-        mark = BoolVal(False)
-    # adjacency_k[0][i][j] = If(mark, 1, 0)
-    adjacency[0][i][j] = mark
+        adjacency[0][i][j] = BoolVal(False)
 logging.debug(f"{time() - t:f} seconds")
 
 logging.debug("constructing: adjacency_k")
 t0 = time()
+
 # powers of The Adjacency Matrix
 for k in range(1, adjacency.shape[0]):
-    adjacency[k] = np.dot(adjacency[0], adjacency[k - 1])  # dot product
+    dot = z3_bool_mat_mul(adjacency[0], adjacency[k - 1])
+    for index in np.ndindex(*adjacency[k].shape):
+        adjacency[k][index] = dot(*index)
 logging.debug(f"{time() - t:f} seconds")
 
 logging.debug("constructing: sum_adjacency_k")
-t0 = time()
+t = time()
 # matrix for the sum of all adjacency^k
-adjacency_k_sum = np.ndarray.sum(adjacency, axis=0)
+
+# logging.debug(adjacency[0].shape)
+f = z3_bool_mat_sum(adjacency)
+adjacency_k_sum = np.empty(adjacency[0].shape, dtype=ExprRef)
+for index in np.ndindex(*adjacency_k_sum.shape):
+    adjacency_k_sum[index] = f(*index)
 logging.debug(f"{time() - t:f} seconds")
 
-# logging.debug("constraining: sum of adjacency^k is nonzero for shaded cell pairs")
-# t = time()
-# # constrain the sum of adjacency^k for k in [1..SIZE-1], is positive for all shaded cells
-# for i in range(SIZE):
-#     for j in range(SIZE):
-#         x1, y1 = coordinate(i)
-#         x2, y2 = coordinate(j)
-#         nonzero = adjacency_k_sum[i][j]
-#         shaded = And(grid[x1][y1], grid[x2][y2])
-#         s.add(shaded == nonzero)
-# logging.debug(f"{time() - t:f} seconds")
-#
+logging.debug("constraining: sum of adjacency^k is nonzero for shaded cell pairs")
+t = time()
+# constrain the sum of adjacency^k for k in [1..SIZE-1], is positive for all shaded cells
+for index in np.ndindex(*adjacency_k_sum.shape):
+    i, j = index
+    nonzero = adjacency_k_sum[index]
+    shaded = And(grid[coordinate(i)], grid[coordinate(j)])
+    s.add(shaded == nonzero)
+logging.debug(f"{time() - t:f} seconds")
+
 logging.debug("finished constraining puzzle rules")
 
 logging.debug("checking sat")
@@ -113,26 +111,28 @@ if sat_result == unsat:
     print("We are not SAT D:")
     exit(1)
 
+for key, value in CONSTANTS.items():
+    print(f"{key} will be {'' if value else 'un'}shaded")
+
 free_terms = [grid[index] for index in np.ndindex(*grid.shape) if index not in CONSTANTS]
-# for index in np.ndindex(*grid.shape):
-#     if index not in CONSTANTS:
-#         free_terms.append(grid[index])
 solutions = all_smt(s, free_terms)
 s = islice(solutions, SOLUTION_COUNT)
 for i, m in enumerate(s, start=1):
     m: ModelRef
-    evaluate = np.vectorize(lambda expr: m.eval(expr, model_completion=True))
+    evaluate = np.vectorize(lambda expr: is_true(m.eval(expr, model_completion=True)))
     eval_grid = evaluate(grid)
     print(f"Solution #{i}:")
     mat_display(eval_grid, bool_display)
 
-    count = 2
-    for k, adjacency_k in islice(enumerate(adjacency), count):
-        eval_adjacency_k = evaluate(adjacency_k)
-        print(f"adjacency^{k + 1}:")
-        mat_display(adjacency_k, bool_display)
+    # count = 1
+    # for k, adjacency_k in islice(enumerate(adjacency), count):
+    #     eval_adjacency_k = evaluate(adjacency_k)
+    #     print(f"adjacency^{k + 1}:")
+    #     mat_display(eval_adjacency_k, bool_display)
 
-    eval_adjacency_k_sum = evaluate(adjacency_k_sum)
-    print(f"adjacency_k_sum:")
-    mat_display(eval_adjacency_k_sum, bool_display)
+    # eval_adjacency_k_sum = evaluate(adjacency_k_sum)
+    # print(f"adjacency_k_sum:")
+    # mat_display(eval_adjacency_k_sum, bool_display)
     print()
+if not next(solutions, None):
+    print("No more solutions")
