@@ -5,7 +5,7 @@ from time import time
 from itertools import islice
 import numpy as np
 
-logging.basicConfig(level=logging.DEBUG)
+# logging.basicConfig(level=logging.DEBUG)
 
 SOLUTION_COUNT = 1
 HEIGHT, WIDTH = 3, 3
@@ -16,6 +16,7 @@ coordinate, cell_number = coordinate_l(WIDTH), cell_number_l(WIDTH)
 CONSTANTS = {
     (0, 0): True,
     (1, 0): True,
+    (2, 0): True,
 }
 
 s = Solver()
@@ -30,7 +31,7 @@ for index in np.ndindex(*grid.shape):
 # numbers = [ [Int(f'number_{r}_{c}') for c in range(HEIGHT)] for r in range(WIDTH) ]
 logging.debug(f"{time() - t:f} seconds")
 
-print("constraining: constants")
+logging.debug("constraining: constants")
 # hard set these coordinates
 for key, value in CONSTANTS.items():
     s.push()
@@ -58,50 +59,34 @@ for x in range(0, WIDTH - 1):
         s.add(Not(And([grid[x][y], grid[x][y + 1], grid[x + 1][y], grid[x + 1][y + 1]])))
 logging.debug(f"{time() - t:f} seconds")
 
-adjacency_k = np.empty((SIZE - 2, SIZE, SIZE), dtype=ExprRef)
+adjacency = np.empty((SIZE - 2, SIZE, SIZE), dtype=ExprRef)
 
 logging.debug("constructing: adjacency matrix")
 t0 = time()
 # the adjacency matrix adjacency[0][i][j] equals 1 when cell#i and cell#j in grid are shaded and connected, otherwise 0
-for index in np.ndindex(*adjacency_k[0].shape):
+for index in np.ndindex(*adjacency[0].shape):
     i, j = index
     d = abs(i - j)
     connected = d == 1 or d == WIDTH or d == 0
-    mark = None
     if connected:
         mark = And(grid[coordinate(i)], grid[coordinate(j)])
     else:
         mark = BoolVal(False)
     # adjacency_k[0][i][j] = If(mark, 1, 0)
-    adjacency_k[0][i][j] = mark
-
-# for x in range(WIDTH):
-#     for y in range(HEIGHT - 1):
-#         x1, y1 = x, y
-#         x2, y2 = x, y + 1
-#         i = cell_number(x1, y1)
-#         j = cell_number(x2, y2)
-#         both_shaded = And(grid[x][y], grid[x][y + 1])
-#         adjacency_k[0][i][j] = both_shaded
-# for x in range(WIDTH - 1):
-#     for y in range(HEIGHT):
-#         i = cell_number(x, y)
-#         j = cell_number(x + 1, y)
-#         both_shaded = And(grid[x][y], grid[x + 1][y])
-#         adjacency_k[0][i][j] = both_shaded
+    adjacency[0][i][j] = mark
 logging.debug(f"{time() - t:f} seconds")
 
 logging.debug("constructing: adjacency_k")
 t0 = time()
 # powers of The Adjacency Matrix
-for k in range(1, adjacency_k.shape[0]):
-    adjacency_k[k] = np.dot(adjacency_k[0], adjacency_k[k - 1])  # dot product
+for k in range(1, adjacency.shape[0]):
+    adjacency[k] = np.dot(adjacency[0], adjacency[k - 1])  # dot product
 logging.debug(f"{time() - t:f} seconds")
 
 logging.debug("constructing: sum_adjacency_k")
 t0 = time()
 # matrix for the sum of all adjacency^k
-adjacency_k_sum = np.ndarray.sum(adjacency_k, axis=0)
+adjacency_k_sum = np.ndarray.sum(adjacency, axis=0)
 logging.debug(f"{time() - t:f} seconds")
 
 # logging.debug("constraining: sum of adjacency^k is nonzero for shaded cell pairs")
@@ -151,10 +136,11 @@ for i, m in enumerate(s, start=1):
         v = m.eval(expr, model_completion=True)
         return '1' if v else '0'
 
-
-    print(f"adjacency:")
-    mat_display(adjacency_k[0], display_int)
+    count = 2
+    for k, adjacency_k in islice(enumerate(adjacency), count):
+        print(f"adjacency^{k+1}:")
+        mat_display(adjacency_k, display_bool)
 
     print(f"adjacency_k_sum:")
-    mat_display(adjacency_k_sum, display_int)
+    mat_display(adjacency_k_sum, display_bool)
     print()
