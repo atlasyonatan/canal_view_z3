@@ -121,26 +121,18 @@ solutions = all_smt(s, free_terms)
 s = islice(solutions, SOLUTION_COUNT)
 for i, m in enumerate(s, start=1):
     m: ModelRef
+    evaluate = np.vectorize(lambda expr: m.eval(expr, model_completion=True))
+    eval_grid = evaluate(grid)
     print(f"Solution #{i}:")
-
-
-    def display_bool(expr):
-        v = m.eval(expr, model_completion=True)
-        return '#' if v else ' '
-
-
-    mat_display(grid, display_bool)
-
-
-    def display_int(expr):
-        v = m.eval(expr, model_completion=True)
-        return '1' if v else '0'
+    mat_display(eval_grid, bool_display)
 
     count = 2
     for k, adjacency_k in islice(enumerate(adjacency), count):
-        print(f"adjacency^{k+1}:")
-        mat_display(adjacency_k, display_bool)
+        eval_adjacency_k = evaluate(adjacency_k)
+        print(f"adjacency^{k + 1}:")
+        mat_display(adjacency_k, bool_display)
 
+    eval_adjacency_k_sum = evaluate(adjacency_k_sum)
     print(f"adjacency_k_sum:")
-    mat_display(adjacency_k_sum, display_bool)
+    mat_display(eval_adjacency_k_sum, bool_display)
     print()

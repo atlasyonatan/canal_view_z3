@@ -74,6 +74,14 @@ def mat_display(mat, display_item):
         print()
 
 
+def int_display(v):
+    return '1' if v else '0'
+
+
+def bool_display(v):
+    return '#' if v else ' '
+
+
 def all_smt(s, initial_terms):
     def block_term(s, m, t):
         s.add(t != m.eval(t, model_completion=True))
