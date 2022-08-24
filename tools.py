@@ -1,10 +1,11 @@
-from z3 import If, And, Or, Not, BoolRef, Int, sat, is_true
+from z3 import And, Or, BoolRef, IntNumRef, sat
 
 # implement python operators for some z3 objects
 BoolRef.__radd__ = lambda self, other: self + other
 BoolRef.__add__ = lambda self, other: And(self, other)
 BoolRef.__rmul__ = lambda self, other: self * other
 BoolRef.__mul__ = lambda self, other: Or(self, other)
+IntNumRef.__bool__ = lambda self: self.as_long() != 0
 
 
 def coordinate_l(width):
@@ -12,7 +13,7 @@ def coordinate_l(width):
 
 
 def cell_number_l(width):
-    return lambda x, y: y + x * width
+    return lambda x, y: x + y * width
 
 
 # def dot_product_l(mat1, mat2, sum_op, mul_op):
@@ -63,13 +64,13 @@ def cell_number_l(width):
 #     return [[g(i, j) for i in range(n)] for j in range(n)]
 
 def mat_display(mat, display_item):
-    width = len(mat[0])
-    height = len(mat)
+    height = len(mat[0])
+    width = len(mat)
     print('x', ' '.join([str(x) for x in range(width)]))
-    for x in range(width):
-        print(x, end=" ")
-        for y in range(height):
-            print(display_item(x, y), end=" ")
+    for y in range(height):
+        print(y, end=" ")
+        for x in range(width):
+            print(display_item(mat[x][y]), end=" ")
         print()
 
 
