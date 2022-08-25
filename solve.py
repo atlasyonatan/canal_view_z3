@@ -8,8 +8,8 @@ import numpy as np
 
 logging.basicConfig(level=logging.DEBUG)
 
-SOLUTION_COUNT = 4  # None for all solutions
-WIDTH, HEIGHT = 3, 3
+SOLUTION_COUNT = 1  # None for all solutions
+WIDTH, HEIGHT = 4, 4
 SIZE = WIDTH * HEIGHT
 print(f"WIDTH = {WIDTH}, HEIGHT = {HEIGHT}")
 coordinate, cell_number = coordinate_l(WIDTH), cell_number_l(WIDTH)
@@ -27,6 +27,7 @@ CONSTANTS = {
 # CONSTANTS[(WIDTH//2, HEIGHT//2)] = True
 
 s = Solver()
+ts = time()
 
 logging.debug("defining value spaces")
 t = time()
@@ -61,6 +62,8 @@ for x in range(0, WIDTH - 1):
         s.add(Not(And([grid[x][y], grid[x][y + 1], grid[x + 1][y], grid[x + 1][y + 1]])))
 logging.debug(f"{time() - t:f} seconds")
 
+logging.debug("constructing: view matrix")
+t = time()
 right, down = np.array([1, 0]), np.array([0, 1])
 cardinals = [right, down, -right, -down]
 edge = np.asarray(grid.shape)
@@ -76,17 +79,17 @@ for index in np.ndindex(*view.shape):
         visible_in_direction = list(accumulate(cells, And, initial=BoolVal(True)))
         visible.extend(visible_in_direction)
     view[index] = Sum([If(cell, 1, 0) for cell in visible])
-
-adjacency = np.empty((SIZE - 2, SIZE, SIZE), dtype=ExprRef)
+logging.debug(f"{time() - t:f} seconds")
 
 logging.debug("constructing: adjacency matrix")
 t0 = time()
+adjacency = np.empty((SIZE - 2, SIZE, SIZE), dtype=ExprRef)
 # the adjacency matrix adjacency[0][i][j] equals 1 when cell#i and cell#j in grid are shaded and connected, otherwise 0
 for index in np.ndindex(*adjacency[0].shape):
     i, j = index
-    direction = abs(i - j)
-    cardinal_neighbors = direction == 0 or direction == WIDTH or (
-                direction == 1 and not abs(i % WIDTH - j % WIDTH) != 1)
+    difference = abs(i - j)
+    cardinal_neighbors = difference == 0 or difference == WIDTH or (
+            difference == 1 and not abs(i % WIDTH - j % WIDTH) != 1)
     if cardinal_neighbors:
         adjacency[0][i][j] = And(grid[coordinate(i)], grid[coordinate(j)])
     else:
@@ -121,15 +124,19 @@ for index in np.ndindex(*adjacency_k_sum.shape):
     nonzero = adjacency_k_sum[index]
     shaded = And(grid[coordinate(i)], grid[coordinate(j)])
     s.add(shaded == nonzero)
-logging.debug(f"{time() - t:f} seconds")
+t1 = time()
+logging.debug(f"{t1 - t:f} seconds")
 
 logging.debug("finished constraining puzzle rules")
+logging.debug("constructing constraints total time: {t1 - t:f} seconds")
 
 logging.debug("checking sat")
 t = time()
 # are we SAT?
 sat_result = s.check()
-logging.debug(f"{time() - t:f} seconds")
+t1 = time()
+logging.debug(f"{t1 - t:f} seconds")
+logging.debug(f"Total time: {t1 - ts:f} seconds")
 
 if sat_result == unsat:
     print("We are not SAT D:")
@@ -151,7 +158,7 @@ for i, m in enumerate(s, start=1):
     shading = eval_bool_func(grid)
     numbers = eval_int_func(view)
     cell_display_func = np.vectorize(cell_display_l(shading, numbers))
-    cells = np.fromfunction(cell_display_func, grid.shape, dtype=str)
+    cells = np.fromfunction(cell_display_func, grid.shape, dtype=int)
     print(f"Solution #{i}:")
     # mat_display(eval_grid, bool_display)
     mat_display(cells)
