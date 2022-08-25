@@ -24,19 +24,23 @@ def z3_bool_mat_sum(mats):
     return lambda *index: Or([mat[index] for mat in mats])
 
 
-def mat_display(mat, display_item):
+def mat_display(mat):
     height = len(mat[0])
     width = len(mat)
     print('x', ' '.join([str(x) for x in range(width)]))
     for y in range(height):
         print(y, end=" ")
         for x in range(width):
-            print(display_item(mat[x][y]), end=" ")
+            print(mat[x][y], end=" ")
         print()
 
 
 def bool_display(v):
     return '#' if v else ' '
+
+
+def cell_display_l(shading, numbers):
+    return lambda *index: "#" if shading[index] else str(numbers[index])
 
 
 def all_smt(s, initial_terms):

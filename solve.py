@@ -1,23 +1,24 @@
 import logging
-from z3 import *
+
+from z3 import *  # Solver, Bool, ExprRef, Or, Not, If,Sum, BoolVal, unsat
 from tools import *
 from time import time
-from itertools import islice
+from itertools import islice, accumulate
 import numpy as np
 
 logging.basicConfig(level=logging.DEBUG)
 
 SOLUTION_COUNT = 4  # None for all solutions
-WIDTH, HEIGHT = 4, 4
+WIDTH, HEIGHT = 3, 3
 SIZE = WIDTH * HEIGHT
 print(f"WIDTH = {WIDTH}, HEIGHT = {HEIGHT}")
 coordinate, cell_number = coordinate_l(WIDTH), cell_number_l(WIDTH)
 
 CONSTANTS = {
     (0, 0): True,
-    (WIDTH-1, HEIGHT-1): True,
-    (0, HEIGHT-1): True,
-    (WIDTH-1, 0): True,
+    (WIDTH - 1, HEIGHT - 1): True,
+    (0, HEIGHT - 1): True,
+    (WIDTH - 1, 0): True,
 }
 #
 # for x in range(WIDTH):
@@ -60,6 +61,22 @@ for x in range(0, WIDTH - 1):
         s.add(Not(And([grid[x][y], grid[x][y + 1], grid[x + 1][y], grid[x + 1][y + 1]])))
 logging.debug(f"{time() - t:f} seconds")
 
+right, down = np.array([1, 0]), np.array([0, 1])
+cardinals = [right, down, -right, -down]
+edge = np.asarray(grid.shape)
+view = np.empty(grid.shape, dtype=ExprRef)
+for index in np.ndindex(*view.shape):
+    start = np.asarray(index)
+    visible = []
+    for direction in cardinals:
+        distance_to_edge = np.min(edge - start)
+        # indices hit by a ray originating at index and moving in direction d, in order
+        ray = [start + a * direction for a in range(1, distance_to_edge)]
+        cells = [grid[tuple(p)] for p in ray]
+        visible_in_direction = list(accumulate(cells, And, initial=BoolVal(True)))
+        visible.extend(visible_in_direction)
+    view[index] = Sum([If(cell, 1, 0) for cell in visible])
+
 adjacency = np.empty((SIZE - 2, SIZE, SIZE), dtype=ExprRef)
 
 logging.debug("constructing: adjacency matrix")
@@ -67,8 +84,9 @@ t0 = time()
 # the adjacency matrix adjacency[0][i][j] equals 1 when cell#i and cell#j in grid are shaded and connected, otherwise 0
 for index in np.ndindex(*adjacency[0].shape):
     i, j = index
-    d = abs(i - j)
-    cardinal_neighbors = d == 0 or d == WIDTH or (d == 1 and not abs(i % WIDTH - j % WIDTH) != 1)
+    direction = abs(i - j)
+    cardinal_neighbors = direction == 0 or direction == WIDTH or (
+                direction == 1 and not abs(i % WIDTH - j % WIDTH) != 1)
     if cardinal_neighbors:
         adjacency[0][i][j] = And(grid[coordinate(i)], grid[coordinate(j)])
     else:
@@ -123,14 +141,20 @@ for key, value in CONSTANTS.items():
 free_terms = [grid[index] for index in np.ndindex(*grid.shape) if index not in CONSTANTS]
 solutions = all_smt(s, free_terms)
 s = islice(solutions, SOLUTION_COUNT)
+
 t = time()
 for i, m in enumerate(s, start=1):
     logging.debug(f"{time() - t:f} seconds")
     m: ModelRef
-    evaluate = np.vectorize(lambda expr: is_true(m.eval(expr, model_completion=True)))
-    eval_grid = evaluate(grid)
+    eval_bool_func = np.vectorize(lambda expr: is_true(m.eval(expr, model_completion=True)))
+    eval_int_func = np.vectorize(lambda expr: m.eval(expr, model_completion=True).as_long())
+    shading = eval_bool_func(grid)
+    numbers = eval_int_func(view)
+    cell_display_func = np.vectorize(cell_display_l(shading, numbers))
+    cells = np.fromfunction(cell_display_func, grid.shape, dtype=str)
     print(f"Solution #{i}:")
-    mat_display(eval_grid, bool_display)
+    # mat_display(eval_grid, bool_display)
+    mat_display(cells)
 
     # count = 1
     # for k, adjacency_k in islice(enumerate(adjacency), count):
