@@ -7,17 +7,23 @@ import numpy as np
 
 logging.basicConfig(level=logging.DEBUG)
 
-SOLUTION_COUNT = 3  # None for all solutions
-HEIGHT, WIDTH = 5, 5
+SOLUTION_COUNT = 4  # None for all solutions
+WIDTH, HEIGHT = 4, 4
 SIZE = WIDTH * HEIGHT
 print(f"WIDTH = {WIDTH}, HEIGHT = {HEIGHT}")
 coordinate, cell_number = coordinate_l(WIDTH), cell_number_l(WIDTH)
 
 CONSTANTS = {
     (0, 0): True,
-    (2, 2): True,
-    (0, 4): True,
+    (WIDTH-1, HEIGHT-1): True,
+    (0, HEIGHT-1): True,
+    (WIDTH-1, 0): True,
 }
+#
+# for x in range(WIDTH):
+#     CONSTANTS[(x, HEIGHT//2)] = False
+#
+# CONSTANTS[(WIDTH//2, HEIGHT//2)] = True
 
 s = Solver()
 
@@ -117,7 +123,9 @@ for key, value in CONSTANTS.items():
 free_terms = [grid[index] for index in np.ndindex(*grid.shape) if index not in CONSTANTS]
 solutions = all_smt(s, free_terms)
 s = islice(solutions, SOLUTION_COUNT)
+t = time()
 for i, m in enumerate(s, start=1):
+    logging.debug(f"{time() - t:f} seconds")
     m: ModelRef
     evaluate = np.vectorize(lambda expr: is_true(m.eval(expr, model_completion=True)))
     eval_grid = evaluate(grid)
@@ -135,5 +143,6 @@ for i, m in enumerate(s, start=1):
     # mat_display(eval_adjacency_k_sum, bool_display)
 
     print()
+    t = time()
 if not next(solutions, None):
     print("No more solutions")
