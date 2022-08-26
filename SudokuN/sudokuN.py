@@ -1,6 +1,6 @@
 from z3 import *
 from mdArray import *
-from tools import mat_display
+from tools import mat_display, in_range
 import numpy as np
 from time import time
 
@@ -9,33 +9,41 @@ s = Solver()
 I = IntSort()
 N = Int('N')
 NS = N * N
-s.add(N == 3)
-
-
-def in_range(expr, start, stop):
-    return And(expr >= start, expr < stop)
-
-
-def is_index(expr, length):
-    return in_range(expr, 0, length)
-
+s.add(N == 1)
 
 grid = Array('grid', I, ArraySort(I, I))
 
 # grid items are [1..NS]
 x, y = Ints('x y')
+x_is_index = in_range(x, 0, NS)
+s.add(x_is_index)
+y_is_index = in_range(y, 0, NS)
+s.add(y_is_index)
+
 is_digit = in_range(grid[x][y], 1, NS + 1)
 s.add(ForAll([x, y], is_digit))
 
 # grid items are distinct
 i, j = Ints('i j')
-# for rows
-row_pair = (0, i), (0, j)
-s.add(ForAll([i, j], same_position(*row_pair) == same_value(grid, *row_pair)))
+i_is_index = in_range(i, 0, NS)
+s.add(i_is_index)
+j_is_index = in_range(j, 0, NS)
+s.add(j_is_index)
 
+# print(s.check())
 # for columns
-col_pair = (i, 0), (j, 0)
-s.add(ForAll([i, j], same_position(*col_pair) == same_value(grid, *col_pair)))
+
+distinct_col = Implies(Distinct(i, j), Distinct(grid[0][i], grid[0][j]))
+s.add(ForAll([i, j], distinct_col))
+# xij_are_index = And(x_is_index, i_is_index, j_is_index)
+# s.add(ForAll([x, i, j], Implies(xij_are_index, distinct_row)))
+
+# patterns=[x_is_index, i_is_index, j_is_index]))
+
+# for rows
+# row_pair = (i, y), (j, y)
+# s.add(ForAll([y, i, j], same_position(*row_pair) == same_value(grid, *row_pair)))
+
 
 # for boxes
 # box_x, box_y = Ints('box_x box_y')

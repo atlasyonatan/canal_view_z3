@@ -64,3 +64,11 @@ def all_smt(s, initial_terms):
                 s.pop()
 
     yield from all_smt_rec(list(initial_terms))
+
+
+def in_range(expr, start, stop):
+    return And(expr >= start, expr < stop)
+
+
+def is_index(expr, length):
+    return in_range(expr, 0, length)

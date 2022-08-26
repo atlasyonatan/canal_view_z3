@@ -1,4 +1,4 @@
-from z3 import Select, Store, And
+from z3 import Select, Store
 
 
 def md_eval(m, arr, *index):
@@ -24,11 +24,3 @@ def md_store(arr, index, value):
         arr = arr_refs.pop()
         value = Store(arr, index[i], value)
     return value
-
-
-def same_position(p1, p2):
-    return And([p1[i] == p2[i] for i in range(len(p1))])
-
-
-def same_value(arr, p1, p2):
-    return md_select(arr, p1) == md_select(arr, p2)
