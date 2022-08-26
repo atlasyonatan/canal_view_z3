@@ -9,7 +9,7 @@ s = Solver()
 I = IntSort()
 N = Int('N')
 NS = N * N
-s.add(N == 1)
+s.add(N == 2)
 
 grid = Array('grid', I, ArraySort(I, I))
 
@@ -26,15 +26,25 @@ s.add(ForAll([x, y], is_digit))
 # grid items are distinct
 i, j = Ints('i j')
 i_is_index = in_range(i, 0, NS)
-s.add(i_is_index)
+# s.add(i_is_index)
 j_is_index = in_range(j, 0, NS)
-s.add(j_is_index)
+# s.add(j_is_index)
 
-# print(s.check())
-# for columns
-
-distinct_col = Implies(Distinct(i, j), Distinct(grid[0][i], grid[0][j]))
+distinct_col = Implies(
+    And(#x_is_index,
+        i_is_index,
+        j_is_index,
+        Distinct(i, j)),
+    Distinct(grid[0][i], grid[0][j]))
 s.add(ForAll([i, j], distinct_col))
+
+# distinct_row = Implies(
+#     And(y_is_index,
+#         i_is_index,
+#         j_is_index,
+#         Distinct(i, j)),
+#     Distinct(grid[i][y], grid[j][y]))
+# s.add(ForAll([y, i, j], distinct_row))
 # xij_are_index = And(x_is_index, i_is_index, j_is_index)
 # s.add(ForAll([x, i, j], Implies(xij_are_index, distinct_row)))
 
@@ -70,5 +80,6 @@ n = m.eval(N, model_completion=True).as_long()
 ns = n ** 2
 board = np.empty((ns, ns), dtype=int)
 for index in np.ndindex(*board.shape):
-    board[index] = md_eval(m, grid, *index).as_long()
+    x, y = index
+    board[index] = m.eval(grid[x][y], model_completion=True).as_long()
 mat_display(board)

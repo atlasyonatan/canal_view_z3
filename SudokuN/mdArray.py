@@ -1,11 +1,19 @@
-from z3 import Select, Store
+from z3 import Select, Store, QuantifierRef, Solver
 
 
-def md_eval(m, arr, *index):
-    f = m.eval(arr)
-    for i in index:
-        f = m.eval(f[i])
-    return f
+# def md_eval(s: Solver, m, arr, *index):
+#     f = m.eval(arr, model_completion=True)
+#     for i in index:
+#         if isinstance(f, QuantifierRef):
+#             # s.push()
+#             s.add(f)
+#             s.check()
+#             m = s.model()
+#             # print(s.check())
+#             # s.pop()
+#         arr = f(i)
+#         f = m.eval(arr, model_completion=True)
+#     return f
 
 
 def md_select(arr, index):
