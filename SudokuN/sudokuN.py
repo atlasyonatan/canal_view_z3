@@ -3,40 +3,83 @@ from mdArray import *
 from tools import mat_display, in_range
 import numpy as np
 from time import time
+from math import prod
 
 s = Solver()
 
 I = IntSort()
 N = Int('N')
-NS = N * N
 s.add(N == 2)
 
-grid = Array('grid', I, ArraySort(I, I))
+box_shape = N, N
+box_length = prod(box_shape)
 
-# grid items are [1..NS]
-x, y = Ints('x y')
-x_is_index = in_range(x, 0, NS)
-s.add(x_is_index)
-y_is_index = in_range(y, 0, NS)
-s.add(y_is_index)
+grid_shape = tuple([d * d for d in box_shape])
+grid_length = prod(grid_shape)
 
-is_digit = in_range(grid[x][y], 1, NS + 1)
-s.add(ForAll([x, y], is_digit))
+grid = Array('grid', I, I)
 
-# grid items are distinct
-i, j = Ints('i j')
-i_is_index = in_range(i, 0, NS)
+grid_i = Int('grid_i')
+s.add(in_range(grid_i, 0, grid_length))
+
+is_digit = in_range(grid[grid_i], 1, grid_length + 1)
+s.add(ForAll(grid_i, is_digit))
+
+grid_j = Int('grid_j')
+s.add(in_range(grid_j, 0, grid_length))
+
+# grid items are distinct for
+ij_distinct = Implies(
+    Distinct(grid_i, grid_j),
+    Distinct(grid[grid_i], grid[grid_j]))
+
+x1, y1 = sd_to_md(grid_i, grid_shape)
+x2, y2 = sd_to_md(grid_j, grid_shape)
+
+# row:
+same_row = x1 == x2
+s.add(ForAll([grid_i, grid_j], Implies(
+    same_row,
+    ij_distinct)))
+
+# col:
+same_col = y1 == y2
+s.add(ForAll([grid_i, grid_j], Implies(
+    same_col,
+    ij_distinct)))
+
+# box:
+# box_i, box_j = Ints('box_i box_j')
+# s.add(in_range(box_i, 0, box_length))
+# s.add(in_range(box_j, 0, box_length))
+
+box1_x, box1_y = sd_to_md(grid_i, box_shape)
+box2_x, box2_y = sd_to_md(grid_j, box_shape)
+
+same_box = And(box1_x == box2_x, box1_y == box2_y)
+
+box_distinct = Implies(
+    same_box,
+    Distinct()
+)
+
+# slice_i = Int('slice_i')
+# s.add(in_range(slice_i, 0, grid_shape[))
+# tuple([for d in grid_shape])
+# s.add(in_range(slice_i, ))
+# i, j = Ints('i j')
+# i_is_index = in_range(i, 0, NS)
 # s.add(i_is_index)
-j_is_index = in_range(j, 0, NS)
+# j_is_index = in_range(j, 0, NS)
 # s.add(j_is_index)
 
-distinct_col = Implies(
-    And(#x_is_index,
-        i_is_index,
-        j_is_index,
-        Distinct(i, j)),
-    Distinct(grid[0][i], grid[0][j]))
-s.add(ForAll([i, j], distinct_col))
+# distinct_col = Implies(
+#     And(  # x_is_index,
+#         i_is_index,
+#         j_is_index,
+#         Distinct(i, j)),
+#     Distinct(grid[0][i], grid[0][j]))
+# s.add(ForAll([i, j], distinct_col))
 
 # distinct_row = Implies(
 #     And(y_is_index,
@@ -73,13 +116,13 @@ check_sat_result = s.check()
 print(f"{time() - t} seconds")
 if check_sat_result == unsat:
     print("unsat")
-    exit(1)
+exit(1)
 
 m = s.model()
 n = m.eval(N, model_completion=True).as_long()
 ns = n ** 2
 board = np.empty((ns, ns), dtype=int)
-for index in np.ndindex(*board.shape):
+for index in np.ndindex(*board.grid_shape):
     x, y = index
-    board[index] = m.eval(grid[x][y], model_completion=True).as_long()
+board[index] = m.eval(grid[x][y], model_completion=True).as_long()
 mat_display(board)
