@@ -1,3 +1,5 @@
+import math
+
 from z3 import Select, Store, QuantifierRef, Solver, Z3_OP_MUL, IntVal, Sum, ExprRef
 from operator import mul
 from itertools import accumulate
@@ -19,10 +21,14 @@ def md_to_sd(coordinates, shape):
     return sum(dmult[i] * coordinates[i] for i in range(len(shape)))
 
 
-def shape_power_i(i, shape, power):
+def blur_md(md, blur):
+    return tuple(md[i] // blur[i] for i in range(len(md)))
+
+
+def blur_sd(i, shape, blur):
     coordinates = sd_to_md(i, shape)
-    new_shape = tuple([d ** power for d in shape])
-    new_coordinates = tuple([coordinates[i] // shape[i] for i in range(len(shape))])
+    new_coordinates = blur_md(coordinates, blur)
+    new_shape = blur_md(shape, blur)
     new_i = md_to_sd(new_coordinates, new_shape)
     return new_i
 
