@@ -8,15 +8,15 @@ from math import prod
 s = Solver()
 
 N = Int('N')
-s.add(N == 3)
+s.add(N == 2)
 
 box_shape = N, N
 box_length = prod(box_shape)
 
 grid_shape = tuple([d * d for d in box_shape])
 grid_length = prod(grid_shape)
-grid = Const('grid', SeqSort(IntSort()))
-s.add(Length(grid) == grid_length)
+grid = Array('grid', IntSort(), IntSort())
+# s.add(Length(grid) == grid_length)
 
 grid_i = Int('grid_i')
 i_in_range = in_range(grid_i, 0, grid_length)
