@@ -11,10 +11,10 @@ s = Solver()
 # s.set("mbqi.trace", True)
 # s.set("mbqi", False)
 s.set("mbqi.trace", True)
-# s.set(auto_config=False, mbqi=False)
+s.set(auto_config=False, mbqi=False)
 
 N = Int('N')
-s.add(N == 1)
+s.add(N == 2)
 
 box_shape = N, N
 box_length = prod(box_shape)
@@ -30,12 +30,12 @@ s.add(i_in_range)
 
 is_digit = in_range(grid[i], 1, box_length + 1)
 # is_zero = grid[grid_i] == 0
-s.add(ForAll(i, is_digit, patterns=[]))
+s.add(ForAll(i, is_digit))
 # s.add(ForAll(i, is_digit))
 # s.add(ForAll(grid_i, is_digit, patterns=[grid[grid_i]]))
 # s.add(ForAll([grid_i], If(i_in_range, is_digit, is_zero)))
 
-j = Int('grid_j')
+j = Int('j')
 j_in_range = in_range(j, 0, grid_length)
 s.add(j_in_range)
 
@@ -54,17 +54,16 @@ x2, y2 = sd_to_md(j, grid_shape)
 
 # row:
 same_row = y1 == y2
-s.add(ForAll([i, j], Implies(
-    same_row,
-    ij_distinct)))
+# s.add(ForAll([i, j], Implies(
+#     same_row,
+#     ij_distinct)))
 
 # col:
 same_col = x1 == x2
+in_col = And(same_col, i_in_range, j_in_range)
+distinct_col = Implies(in_col, ij_distinct)
 
-
-s.add(ForAll([i, j], Implies(
-    same_col,
-    ij_distinct)))
+s.add(ForAll([i, j], distinct_col, patterns=[same_col]))
 
 
 def grid_to_box(i):
@@ -73,17 +72,19 @@ def grid_to_box(i):
 
 box_i, box_j = grid_to_box(i), grid_to_box(j)
 same_box = box_i == box_j
-s.add(ForAll([i, j], Implies(
-    same_box,
-    ij_distinct)))
+# s.add(ForAll([i, j], Implies(
+#     same_box,
+#     ij_distinct)))
 
 t = time()
 check_sat_result = s.check()
 print(f"{time() - t} seconds")
+print(check_sat_result)
 if check_sat_result == unsat:
-    print("unsat")
     exit(1)
-
+if check_sat_result == unknown:
+    print(s.reason_unknown())
+    exit(1)
 m = s.model()
 
 eval_int = np.vectorize(lambda expr: m.eval(expr, model_completion=True).as_long())
