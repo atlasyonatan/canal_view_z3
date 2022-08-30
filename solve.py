@@ -1,6 +1,5 @@
 import logging
-
-from z3 import *  # Solver, Bool, ExprRef, Or, Not, If,Sum, BoolVal, unsat
+from z3 import *
 from tools import *
 from time import time
 from itertools import islice, accumulate
@@ -72,11 +71,11 @@ for index in np.ndindex(*view.shape):
     start = np.asarray(index)
     visible = []
     for direction in cardinals:
-        distance_to_edge = np.min(edge - start)
+        distance_to_edge = min(abs(edge//direction))
         # indices hit by a ray originating at index and moving in direction d, in order
         ray = [start + a * direction for a in range(1, distance_to_edge)]
         cells = [grid[tuple(p)] for p in ray]
-        visible_in_direction = list(accumulate(cells, And, initial=BoolVal(True)))
+        visible_in_direction = list(accumulate(cells, And))
         visible.extend(visible_in_direction)
     view[index] = Sum([If(cell, 1, 0) for cell in visible])
 logging.debug(f"{time() - t:f} seconds")
@@ -147,10 +146,10 @@ for key, value in CONSTANTS.items():
 
 free_terms = [grid[index] for index in np.ndindex(*grid.shape) if index not in CONSTANTS]
 solutions = all_smt(s, free_terms)
-s = islice(solutions, SOLUTION_COUNT)
+sl = islice(solutions, SOLUTION_COUNT)
 
 t = time()
-for i, m in enumerate(s, start=1):
+for i, m in enumerate(sl, start=1):
     logging.debug(f"{time() - t:f} seconds")
     m: ModelRef
     eval_bool_func = np.vectorize(lambda expr: is_true(m.eval(expr, model_completion=True)))

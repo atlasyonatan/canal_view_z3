@@ -40,8 +40,8 @@ def bool_display(v):
 
 
 def cell_display_l(shading, numbers):
-    # return lambda *index: "#" if shading[index] else str(numbers[index])
-    return lambda *index: "#" if shading[index] else ' '
+    return lambda *index: "#" if shading[index] else str(numbers[index])
+    # return lambda *index: "#" if shading[index] else ' '
 
 
 def all_smt(s, initial_terms):
