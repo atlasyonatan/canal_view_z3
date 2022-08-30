@@ -85,7 +85,7 @@ logging.debug("constructing: adjacency matrix")
 t0 = time()
 adjacency = np.empty((SIZE - 2, SIZE, SIZE), dtype=ExprRef)
 # the adjacency matrix adjacency[0][i][j] equals 1 when cell#i and cell#j in grid are shaded and connected, otherwise 0
-for index in np.ndindex(*adjacency[0].shape):
+for index in np.ndindex(*adjacency[0].grid_shape):
     i, j = index
     difference = abs(i - j)
     cardinal_neighbors = difference == 0 or difference == WIDTH or (
@@ -102,7 +102,7 @@ t0 = time()
 # powers of The Adjacency Matrix
 for k in range(1, adjacency.shape[0]):
     mat_mul = z3_bool_mat_mul(adjacency[0], adjacency[k - 1])
-    for index in np.ndindex(*adjacency[k].shape):
+    for index in np.ndindex(*adjacency[k].grid_shape):
         adjacency[k][index] = mat_mul(*index)
 logging.debug(f"{time() - t:f} seconds")
 
@@ -111,7 +111,7 @@ t = time()
 
 # matrix for the sum of all adjacency^k
 mat_sum = z3_bool_mat_sum(adjacency)
-adjacency_k_sum = np.empty(adjacency[0].shape, dtype=ExprRef)
+adjacency_k_sum = np.empty(adjacency[0].grid_shape, dtype=ExprRef)
 for index in np.ndindex(*adjacency_k_sum.shape):
     adjacency_k_sum[index] = mat_sum(*index)
 logging.debug(f"{time() - t:f} seconds")
