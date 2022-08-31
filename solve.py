@@ -19,11 +19,10 @@ CONSTANTS = {
     (0, HEIGHT - 1): True,
     (WIDTH - 1, 0): True,
 }
-#
-# for x in range(WIDTH):
-#     CONSTANTS[(x, HEIGHT//2)] = False
-#
-# CONSTANTS[(WIDTH//2, HEIGHT//2)] = True
+
+NUMBERS = {
+    (1, 1): 4,
+}
 
 s = Solver()
 ts = time()
@@ -74,9 +73,9 @@ for index in np.ndindex(*view.shape):
         ray = []
         a = 1
         p = start + a * direction
-        while min(p) >= 0 and min(edge-p) > 0:
+        while min(p) >= 0 and min(edge - p) > 0:
             ray.append(p)
-            a = a+1
+            a = a + 1
             p = start + a * direction
         if len(ray) == 0:
             continue
@@ -85,6 +84,25 @@ for index in np.ndindex(*view.shape):
         visible.extend(visible_in_direction)
     view[index] = Sum([If(cell, 1, 0) for cell in visible])
 logging.debug(f"{time() - t:f} seconds")
+
+logging.debug("constraining: numbers")
+# hard set these coordinates
+for key, value in NUMBERS.items():
+    t = time()
+    constraint = f"'{key} == {value}'"
+    logging.debug(f"constraining: {constraint}")
+    s.add(Not(grid[key]))
+    s.add(view[key] == value)
+    logging.debug(f"{time() - t:f} seconds")
+
+    logging.debug("checking sat")
+    t = time()
+    sat_result = s.check()
+    logging.debug(f"{time() - t:f} seconds")
+
+    if sat_result == unsat:
+        print(f"This constraint: {constraint} causes an unsat D:")
+        exit(1)
 
 logging.debug("constructing: adjacency matrix")
 t0 = time()
@@ -133,7 +151,7 @@ t1 = time()
 logging.debug(f"{t1 - t:f} seconds")
 
 logging.debug("finished constraining puzzle rules")
-logging.debug("constructing constraints total time: {t1 - t:f} seconds")
+logging.debug(f"constructing constraints total time: {t1 - ts:f} seconds")
 
 logging.debug("checking sat")
 t = time()
@@ -146,6 +164,9 @@ logging.debug(f"Total time: {t1 - ts:f} seconds")
 if sat_result == unsat:
     print("We are not SAT D:")
     exit(1)
+
+for key, value in NUMBERS.items():
+    print(f"{key} will be {value}")
 
 for key, value in CONSTANTS.items():
     print(f"{key} will be {'' if value else 'un'}shaded")
