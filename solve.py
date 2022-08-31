@@ -71,9 +71,15 @@ for index in np.ndindex(*view.shape):
     start = np.asarray(index)
     visible = []
     for direction in cardinals:
-        distance_to_edge = min(abs(edge//direction))
-        # indices hit by a ray originating at index and moving in direction d, in order
-        ray = [start + a * direction for a in range(1, distance_to_edge)]
+        ray = []
+        a = 1
+        p = start + a * direction
+        while min(p) >= 0 and min(edge-p) > 0:
+            ray.append(p)
+            a = a+1
+            p = start + a * direction
+        if len(ray) == 0:
+            continue
         cells = [grid[tuple(p)] for p in ray]
         visible_in_direction = list(accumulate(cells, And))
         visible.extend(visible_in_direction)
