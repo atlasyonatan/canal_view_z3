@@ -5,7 +5,7 @@ from time import time
 from itertools import islice, accumulate
 import numpy as np
 
-# logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=logging.DEBUG)
 
 SOLUTION_COUNT = None  # None for all solutions
 WIDTH, HEIGHT = 5, 5
@@ -14,17 +14,17 @@ print(f"WIDTH = {WIDTH}, HEIGHT = {HEIGHT}")
 coordinate, cell_number = coordinate_l(WIDTH), cell_number_l(WIDTH)
 
 CONSTANTS = {
-    # (0, 0): True,
+    # (0, 0): False,
     # (WIDTH - 1, HEIGHT - 1): True,
     # (0, HEIGHT - 1): True,
     # (WIDTH - 1, 0): True,
     # (1, 1): 3,
-    (0, 0): 5,
-    (1, 2): 4,
-    (3, 2): 3,
-    (0, 4): 3,
-    (2, 4): 1,
-    (4, 4): 4,
+    # (0, 0): 5,
+    # (1, 2): 4,
+    # (3, 2): 3,
+    # (0, 4): 3,
+    # (2, 4): 1,
+    # (4, 4): 4,
 }
 
 s = Solver()
@@ -74,13 +74,13 @@ logging.debug("constraining: CONSTANTS")
 # hard set these coordinates
 for key, value in CONSTANTS.items():
     t = time()
-    if key < (0,0) or key >= (WIDTH, HEIGHT):
+    if key < (0, 0) or key >= (WIDTH, HEIGHT):
         raise ValueError(f"Constant key '{key}' is outside of board range")
     if type(value) is bool:
         logging.debug(f"constraining: grid at {key} is {value}")
         s.add(grid[key] == value)
     elif type(value) is int:
-        if 0 > value or value >= WIDTH + HEIGHT:
+        if 0 > value or value > WIDTH + HEIGHT - 2:
             raise ValueError(f"Invalid constant number for {value} in CONSTANTS at key {key}")
         logging.debug(f"constraining: view at {key} is {value}, grid at {key} is {False}")
         s.add(view[key] == value)
@@ -164,9 +164,11 @@ for key, value in CONSTANTS.items():
         value = ('' if value else 'un') + 'shaded'
     print(f"{key} will be {value}")
 
-
 free_terms = [grid[index] for index in np.ndindex(*grid.shape) if index not in CONSTANTS]
 solutions = all_smt(s, free_terms)
+# for i, m in enumerate(solutions, start=1):
+#     print(i)
+# exit(0)
 sl = islice(solutions, SOLUTION_COUNT)
 
 t = time()
