@@ -1,3 +1,4 @@
+import itertools
 import logging
 from z3 import *
 from tools import *
@@ -7,8 +8,8 @@ import numpy as np
 
 logging.basicConfig(level=logging.DEBUG)
 
-SOLUTION_COUNT = None  # None for all solutions
-WIDTH, HEIGHT = 5, 5
+SOLUTION_COUNT = 1  # None for all solutions
+WIDTH, HEIGHT = 3, 3
 SIZE = WIDTH * HEIGHT
 print(f"WIDTH = {WIDTH}, HEIGHT = {HEIGHT}")
 coordinate, cell_number = coordinate_l(WIDTH), cell_number_l(WIDTH)
@@ -144,6 +145,8 @@ for index in np.ndindex(*adjacency_k_sum.shape):
 t1 = time()
 logging.debug(f"{t1 - t:f} seconds")
 
+logging.debug("constructing: ")
+
 logging.debug("finished constraining puzzle rules")
 logging.debug(f"constructing constraints total time: {t1 - ts:f} seconds")
 
@@ -175,6 +178,7 @@ t = time()
 for i, m in enumerate(sl, start=1):
     logging.debug(f"{time() - t:f} seconds")
     m: ModelRef
+
     eval_bool_func = np.vectorize(lambda expr: is_true(m.eval(expr, model_completion=True)))
     eval_int_func = np.vectorize(lambda expr: m.eval(expr, model_completion=True).as_long())
     shading = eval_bool_func(grid)
@@ -184,6 +188,43 @@ for i, m in enumerate(sl, start=1):
     print(f"Solution #{i}:")
     mat_display(cells)
     print()
+
+    number_coordinates = [c for c in np.ndindex(*grid.shape) if not shading[c]]
+
+    threshold = 1
+
+
+    def required(start):
+        for i in range(start, len(number_coordinates)):
+            s.push()
+            # make a new puzzle
+            fixed = list(itertools.chain(range(i), range(i + 1, len(number_coordinates))))
+            fixed_number_coordinates = set(number_coordinates[f] for f in fixed)
+            for c in fixed_number_coordinates:
+                fix_term(s, m, view[c])
+                fix_term(s, m, grid[c])
+            free_coordinates = [c for c in np.ndindex(*grid.shape) if
+                                c not in CONSTANTS and c not in fixed_number_coordinates]
+            free_terms = [grid[c] for c in free_coordinates]
+            solutions = all_smt(s, free_terms)
+            above = yields_above(solutions, n=threshold)
+            s.pop()
+            if above:
+                yield [i]  # found required
+            else:
+                s.push()
+                c = number_coordinates[i]
+                fix_term(s, m, view[c])
+                fix_term(s, m, grid[c])
+                yield from ([i] + req for req in required(i + 1))
+                s.pop()
+
+
+    print("possible numbers:")
+    print('\n'.join(str(t) for t in enumerate(number_coordinates)))
+    print("required combinations:")
+    for r in required(0):
+        print(r)
     t = time()
 if not next(solutions, None):
     print("No more solutions")

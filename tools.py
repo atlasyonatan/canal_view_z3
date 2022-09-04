@@ -1,3 +1,4 @@
+import z3
 from z3 import And, Or, sat
 
 
@@ -44,13 +45,15 @@ def cell_display_l(shading, numbers):
     # return lambda *index: "#" if shading[index] else ' '
 
 
+def block_term(s, m, t):
+    s.add(t != m.eval(t, model_completion=True))
+
+
+def fix_term(s, m, t):
+    s.add(t == m.eval(t, model_completion=True))
+
+
 def all_smt(s, initial_terms):
-    def block_term(s, m, t):
-        s.add(t != m.eval(t, model_completion=True))
-
-    def fix_term(s, m, t):
-        s.add(t == m.eval(t, model_completion=True))
-
     def all_smt_rec(terms):
         if sat == s.check():
             m = s.model()
@@ -64,3 +67,50 @@ def all_smt(s, initial_terms):
                 s.pop()
 
     yield from all_smt_rec(list(initial_terms))
+
+
+def yields_above(iterable, n):
+    count = 0
+    while count <= n and next(iterable, None):
+        count += 1
+    return count > n
+
+# def redundant(s, terms):
+#     if sat != s.check():
+#         raise ValueError("The given solver is unsat")
+#     m = s.model()
+#     s.push()
+#
+#     # for i in range(len(initial_terms)):
+#     #     fix_term(s, m, initial_terms[i])
+#
+#     def redundant_rec(start):
+#         for i in range(start, len(terms)):
+#             s.push()
+#             block_term(s, m, terms[i])
+#             for j in range(i):
+#                 fix_term(s, m, terms[j])
+#             for j in range(i + 1, len(terms)):
+#                 fix_term(s, m, terms[j])
+#             check = s.check()
+#             s.pop()
+#             if sat == check:
+#                 yield i
+#             else:
+#                 s.push()
+#                 fix_term(s, m, terms[i])
+#                 yield from redundant_rec(i + 1)
+#                 s.pop()
+#             # if sat == check:
+#             #
+#             #     had_items = False
+#             #     for r in rec:
+#             #         had_items = True
+#             #         r.append(i)
+#             #         yield r
+#             #     if not had_items:
+#             #         yield [i]
+#             #     s.pop()
+#
+#     yield from redundant_rec(0)
+#     s.pop()
