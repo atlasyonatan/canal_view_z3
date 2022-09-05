@@ -53,6 +53,10 @@ def fix_term(s, m, t):
     s.add(t == m.eval(t, model_completion=True))
 
 
+def fix_term(m, t):
+    return t == m.eval(t, model_completion=True)
+
+
 def all_smt(s, initial_terms):
     def all_smt_rec(terms):
         if sat == s.check():
@@ -74,6 +78,8 @@ def yields_above(iterable, n):
     while count <= n and next(iterable, None):
         count += 1
     return count > n
+
+# def accumulate_items
 
 # def redundant(s, terms):
 #     if sat != s.check():

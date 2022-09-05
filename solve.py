@@ -1,3 +1,4 @@
+import functools
 import itertools
 import logging
 from z3 import *
@@ -9,7 +10,7 @@ import numpy as np
 logging.basicConfig(level=logging.DEBUG)
 
 SOLUTION_COUNT = 1  # None for all solutions
-WIDTH, HEIGHT = 3, 3
+WIDTH, HEIGHT = 5, 5
 SIZE = WIDTH * HEIGHT
 print(f"WIDTH = {WIDTH}, HEIGHT = {HEIGHT}")
 coordinate, cell_number = coordinate_l(WIDTH), cell_number_l(WIDTH)
@@ -189,42 +190,92 @@ for i, m in enumerate(sl, start=1):
     mat_display(cells)
     print()
 
-    number_coordinates = [c for c in np.ndindex(*grid.shape) if not shading[c]]
 
+    def same_number(index):
+        return And(fix_term(m, grid[index]), fix_term(m, view[index]))
+
+
+    # number_coordinates = [c for c in np.ndindex(*grid.shape) if not shading[c]]
+    # same_number_terms = [same_number(c) for c in number_coordinates]
+    # free_coordinates =
+    not_constant = [c for c in np.ndindex(*grid.shape) if c not in CONSTANTS]
+    shaded = [c for c in not_constant if shading[c]]
+    optional_numbers_coordinates = [c for c in not_constant if not shading[c]]
     threshold = 1
 
 
-    def required(start):
-        for i in range(start, len(number_coordinates)):
+    def redundant(start: int = 0):
+        for i in range(start, len(optional_numbers_coordinates)):
             s.push()
-            # make a new puzzle
-            fixed = list(itertools.chain(range(i), range(i + 1, len(number_coordinates))))
-            fixed_number_coordinates = set(number_coordinates[f] for f in fixed)
-            for c in fixed_number_coordinates:
-                fix_term(s, m, view[c])
-                fix_term(s, m, grid[c])
-            free_coordinates = [c for c in np.ndindex(*grid.shape) if
-                                c not in CONSTANTS and c not in fixed_number_coordinates]
-            free_terms = [grid[c] for c in free_coordinates]
-            solutions = all_smt(s, free_terms)
-            above = yields_above(solutions, n=threshold)
+            is_same = same_number(optional_numbers_coordinates[i])
+            s.add(Not(is_same))
+
+            constant_numbers = [optional_numbers_coordinates[j] for j in
+                                range(start + 1, len(optional_numbers_coordinates))]
+            for c in constant_numbers:
+                s.add(same_number(c))
+
+            # redundant_so_far = [optional_numbers_coordinates[j] for j in range(start + 1)]
+            # free_coordinates = redundant_so_far + shaded
+            # free_terms = [grid[c] for c in free_coordinates]
+            # solutions = all_smt(s, free_terms)
+            # count = 0
+            # while count <= threshold:
+            #     solution = next(solutions, None)
+            #     if solution is None:
+            #         break
+            #     count += 1
+            # if 0 <= count <= threshold:
+            # return count > n
+            # if not yields_above(, threshold):
+            check = s.check()
             s.pop()
-            if above:
-                yield [i]  # found required
-            else:
-                s.push()
-                c = number_coordinates[i]
-                fix_term(s, m, view[c])
-                fix_term(s, m, grid[c])
-                yield from ([i] + req for req in required(i + 1))
-                s.pop()
+            if check == unsat:
+                rec = redundant(i + 1)
+                if red := next(rec, None):
+                    yield [i] + red
+                    yield from ([i] + red for red in rec)
+                else:
+                    yield [i]
+                # for red in :
+                #     had_children
+                #     yield
+                # while red := next(rec, None):
+                #     yield [i] + red
+                #
+                # yield from ([i] + red for red in redundant(i + 1))
+                #
+                # yield [i]
+                # s.push()
+                # s.add(is_same)
+
+                # s.pop()
 
 
     print("possible numbers:")
-    print('\n'.join(str(t) for t in enumerate(number_coordinates)))
-    print("required combinations:")
-    for r in required(0):
-        print(r)
+    print('\n'.join(str(t) for t in enumerate(optional_numbers_coordinates)))
+    logging.debug("iterating redundant combinations:")
+    t = time()
+    r = redundant()
+    count = 0
+    max_combs = []
+    max_len = 0
+    while comb := next(r, None):
+        count += 1
+        if len(comb) < max_len:
+            continue
+        if len(comb) > max_len:
+            max_len = len(comb)
+            max_combs.clear()
+        max_combs.append(comb)
+    logging.debug(f"{time() - t:f} seconds")
+
+    print(f"redundant combinations count: {count}")
+    print(f"longest redundant combinations:")
+    for comb in max_combs:
+        print(comb)
+    # redundant_combinations = red
+    print()
     t = time()
 if not next(solutions, None):
     print("No more solutions")
