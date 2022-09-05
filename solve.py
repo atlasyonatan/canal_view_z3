@@ -7,7 +7,7 @@ import numpy as np
 
 logging.basicConfig(level=logging.DEBUG)
 
-SOLUTION_COUNT = 1  # None for all solutions
+SOLUTION_COUNT = None  # None for all solutions
 WIDTH, HEIGHT = 5, 5
 SIZE = WIDTH * HEIGHT
 print(f"WIDTH = {WIDTH}, HEIGHT = {HEIGHT}")
@@ -18,10 +18,10 @@ CONSTANTS = {
     # (WIDTH - 1, HEIGHT - 1): True,
     # (0, HEIGHT - 1): True,
     # (WIDTH - 1, 0): True,
-    # (1, 1): 3,
-    # (0, 0): 5,
-    # (1, 2): 4,
-    # (3, 2): 3,
+    (4, 1): 6,
+    (2, 2): 5,
+    (1, 3): 3,
+    (3, 4): 3,
     # (0, 4): 3,
     # (2, 4): 1,
     # (4, 4): 4,
@@ -186,7 +186,16 @@ for i, m in enumerate(sl, start=1):
     shading = eval_bool_func(grid)
     numbers = eval_int_func(view)
     cell_display_func = np.vectorize(cell_display_l(shading, numbers))
-    cells = np.fromfunction(cell_display_func, grid.shape, dtype=int)
+
+    constant_numbers = np.empty(grid.shape, dtype=str)
+    for index in np.ndindex(*constant_numbers.shape):
+        constant_numbers[index] = ' '
+    for key, value in CONSTANTS.items():
+        if type(value) is int:
+            constant_numbers[key] = str(value)
+
+    shaded_or_constant_number_display = np.vectorize(shaded_or_display_l(shading, constant_numbers))
+    cells = np.fromfunction(shaded_or_constant_number_display, grid.shape, dtype=int)
     print(f"Solution #{i}:")
     mat_display(cells)
     print()

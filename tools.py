@@ -57,6 +57,11 @@ def cell_display_l(shading, numbers):
     # return lambda *index: "#" if shading[index] else ' '
 
 
+def shaded_or_display_l(shading, other):
+    return lambda *index: "#" if shading[index] else other[index]
+    # return lambda *index: "#" if shading[index] else ' '
+
+
 def all_smt(s, initial_terms):
     def block_term(s, m, t):
         s.add(t != m.eval(t, model_completion=True))
