@@ -288,7 +288,7 @@ for i, m in enumerate(sl, start=1):
             coordinate = optional_numbers_coordinates[j]
             value = numbers[coordinate]
             puzzle[coordinate] = str(value)
-        print(mat_display(puzzle))
+        mat_display(puzzle)
 
     print()
     t = time()

@@ -120,3 +120,5 @@ def yields_above(iterable, n):
 #
 #     yield from redundant_rec(0)
 #     s.pop()
+
+# def accumulate()
