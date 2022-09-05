@@ -18,11 +18,24 @@ def cell_number_l(width):
 
 
 def z3_bool_mat_mul(mat1, mat2):
-    return lambda i, j: Or([And(mat1[i][k], mat2[k][j]) for k in range(len(mat1))])
+    return lambda i, j: simplify_or([simplify_and(mat1[i][k], mat2[k][j]) for k in range(len(mat1))])
+
+
+def simplify_and(*terms):
+    if any(t is False for t in terms):
+        return False
+    return And(terms)
+
+
+def simplify_or(terms):
+    a = [t for t in terms if t is not False]
+    if len(a) == 0:
+        return False
+    return Or(a)
 
 
 def z3_bool_mat_sum(mats):
-    return lambda *index: Or([mat[index] for mat in mats])
+    return lambda *index: simplify_or([mat[index] for mat in mats])
 
 
 def mat_display(mat):

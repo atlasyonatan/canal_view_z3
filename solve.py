@@ -112,7 +112,7 @@ for index in np.ndindex(*adjacency[0].shape):
     if cardinal_neighbors:
         adjacency[0][i][j] = And(grid[coordinate(i)], grid[coordinate(j)])
     else:
-        adjacency[0][i][j] = BoolVal(False)
+        adjacency[0][i][j] = False
 logging.debug(f"{time() - t:f} seconds")
 
 logging.debug("constructing: adjacency_k")
@@ -145,11 +145,17 @@ for index in np.ndindex(*adjacency_k_sum.shape):
     s.add(shaded == nonzero)
 t1 = time()
 logging.debug(f"{t1 - t:f} seconds")
+logging.debug(f"constructing constraints total time: {t1 - ts:f} seconds")
 
 logging.debug("constructing: ")
 
 logging.debug("finished constraining puzzle rules")
-logging.debug(f"constructing constraints total time: {t1 - ts:f} seconds")
+# logging.debug("exporting solver assertions to file:")
+# t = time()
+# file_name = f"{WIDTH}_{HEIGHT}.smt"
+# with open(file_name, "w") as f:
+#     f.write(s.to_smt2())
+# logging.debug(f"{time() - t:f} seconds")
 
 logging.debug("checking sat")
 t = time()
