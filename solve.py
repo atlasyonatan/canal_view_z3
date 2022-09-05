@@ -252,8 +252,8 @@ for i, m in enumerate(sl, start=1):
                 # s.pop()
 
 
-    print("possible numbers:")
-    print('\n'.join(str(t) for t in enumerate(optional_numbers_coordinates)))
+    # print("possible numbers:")
+    # print('\n'.join(str(t) for t in enumerate(optional_numbers_coordinates)))
     logging.debug("iterating redundant combinations:")
     t = time()
     r = redundant()
@@ -271,10 +271,25 @@ for i, m in enumerate(sl, start=1):
     logging.debug(f"{time() - t:f} seconds")
 
     print(f"redundant combinations count: {count}")
-    print(f"longest redundant combinations:")
-    for comb in max_combs:
-        print(comb)
+    print(f"max redundant length: {max_len}")
+    # print(f"longest redundant combinations:")
+    # for comb in max_combs:
+    #     print(comb)
     # redundant_combinations = red
+    puzzle_count = 10
+    for n, comb in enumerate(islice(max_combs, puzzle_count), start=1):
+        print(f"Puzzle #{n}:")
+        puzzle = np.empty(grid.shape, dtype=str)
+        for c in np.ndindex(*puzzle.shape):
+            puzzle[c] = ' '
+        comb = set(comb)
+        required = [j for j in range(len(optional_numbers_coordinates)) if j not in comb]
+        for j in required:
+            coordinate = optional_numbers_coordinates[j]
+            value = numbers[coordinate]
+            puzzle[coordinate] = str(value)
+        print(mat_display(puzzle))
+
     print()
     t = time()
 if not next(solutions, None):
