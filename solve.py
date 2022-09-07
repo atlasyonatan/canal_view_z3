@@ -18,10 +18,10 @@ CONSTANTS = {
     # (WIDTH - 1, HEIGHT - 1): True,
     # (0, HEIGHT - 1): True,
     # (WIDTH - 1, 0): True,
-    (4, 1): 6,
-    (2, 2): 5,
-    (1, 3): 3,
-    (3, 4): 3,
+    # (4, 1): 6,
+    # (2, 2): 5,
+    # (1, 3): 3,
+    # (3, 4): 3,
     # (0, 4): 3,
     # (2, 4): 1,
     # (4, 4): 4,
@@ -105,7 +105,7 @@ adjacency = np.empty((SIZE - 2, SIZE, SIZE), dtype=ExprRef)
 for index in np.ndindex(*adjacency[0].shape):
     i, j = index
     difference = abs(i - j)
-    cardinal_neighbors = difference == 0 or difference == WIDTH or (
+    cardinal_neighbors = difference == WIDTH or (
             difference == 1 and not abs(i % WIDTH - j % WIDTH) != 1)
     if cardinal_neighbors:
         adjacency[0][i][j] = And(grid[coordinate(i)], grid[coordinate(j)])
@@ -146,12 +146,12 @@ logging.debug(f"{t1 - t:f} seconds")
 logging.debug(f"constructing constraints total time: {t1 - ts:f} seconds")
 
 logging.debug("finished constraining puzzle rules")
-# logging.debug("exporting solver assertions to file:")
-# t = time()
-# file_name = f"{WIDTH}_{HEIGHT}.smt"
-# with open(file_name, "w") as f:
-#     f.write(s.to_smt2())
-# logging.debug(f"{time() - t:f} seconds")
+logging.debug("exporting solver assertions to file:")
+t = time()
+file_name = f"{WIDTH}_{HEIGHT}.smt"
+with open(file_name, "w") as f:
+    f.write(s.to_smt2())
+logging.debug(f"{time() - t:f} seconds")
 
 logging.debug("checking sat")
 t = time()
