@@ -81,22 +81,24 @@ def all_smt(s, initial_terms):
 
 
 def puzzles(s, constraints, free_terms, stop=None):
-    def puzzles_rec(constrained, start):
+    permutation = [True for _ in constraints]
+
+    def puzzles_rec(start):
         s_ = Solver()
         s_.assert_exprs(s.assertions())
+        indices = [i for i in range(len(constraints)) if permutation[i]]
+        for i in indices:
+            s_.add(constraints[i])
         count = i_len(itertools.islice(all_smt(s_, free_terms), stop))
-        if count == 0:
+        if count == 0 or type(stop) is int and count == stop:
             return
-        if type(stop) is not int or count < stop:
-            yield constrained
+        yield indices
         for i in range(start, len(constraints)):
-            s.push()
-            constraint = constraints[i]
-            s.add(constraint)
-            yield from puzzles_rec(constrained + [i], i + 1)
-            s.pop()
+            permutation[i] = not permutation[i]
+            yield from puzzles_rec(i + 1)
+            permutation[i] = not permutation[i]
 
-    return puzzles_rec([], 0)
+    yield from puzzles_rec(0)
 
 
 def i_len(iterator):

@@ -1,5 +1,3 @@
-import functools
-import itertools
 import logging
 from z3 import *
 from tools import *
