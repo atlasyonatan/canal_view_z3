@@ -1,15 +1,16 @@
 from z3 import *
 from tools import coordinate_l, index_l
 from itertools import starmap
-from functools import partial,reduce
+from functools import reduce
+from mdArray import sd_to_md, md_to_sd
 
 
 compose = lambda *fs: reduce(lambda f,g: lambda *a, **kw: f(g(*a, **kw)), fs)
 
 width, height = Ints("width height")
 
-coordinate = coordinate_l(width)
-index = index_l(width)
+coordinate = sd_to_md((width, height))
+index = md_to_sd((width, height))
 
 board = Array("1d-board", IntSort(), BoolSort())
 
@@ -34,17 +35,17 @@ if __name__ == "__main__":
     WIDTH, HEIGHT = 3, 3
 
     print(rule_no_2x2.sexpr())
-    index = index_l(WIDTH)
+    index = md_to_sd((WIDTH, HEIGHT))
     solver = Solver()
 
     solver.add(width == WIDTH)
     solver.add(height == HEIGHT)
     solver.add(rule_no_2x2)
 
-    solver.add(board[index(10,0)] == True)
-    solver.add(board[index(10,1)] == True)
-    solver.add(board[index(11,0)] == True)
-    solver.add(board[index(11,1)] == True)
+    solver.add(board[index(0,0)] == True)
+    solver.add(board[index(0,1)] == True)
+    solver.add(board[index(1,0)] == True)
+    # solver.add(board[index(1,1)] == True)
 
     if solver.check() == unsat:
         print("unsat")
