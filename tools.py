@@ -1,5 +1,4 @@
 from z3 import And, Or, sat
-from typing import Iterable
 
 # implement python operators for some z3 objects
 # z3.BoolRef.__radd__ = lambda self, other: self + other
@@ -15,8 +14,11 @@ def coordinate_l(width):
 def index_l(width):
     return lambda x, y: x + y * width
 
+
 def z3_bool_mat_mul(mat1, mat2):
-    return lambda i, j: simplify_or([simplify_and(mat1[i][k], mat2[k][j]) for k in range(len(mat1))])
+    return lambda i, j: simplify_or(
+        [simplify_and(mat1[i][k], mat2[k][j]) for k in range(len(mat1))]
+    )
 
 
 def simplify_and(*terms):
@@ -39,7 +41,7 @@ def z3_bool_mat_sum(mats):
 def mat_display(mat):
     height = len(mat[0])
     width = len(mat)
-    print('x', ' '.join([str(x) for x in range(width)]))
+    print("x", " ".join([str(x) for x in range(width)]))
     for y in range(height):
         print(y, end=" ")
         for x in range(width):
@@ -48,7 +50,7 @@ def mat_display(mat):
 
 
 def bool_display(v):
-    return '#' if v else ' '
+    return "#" if v else " "
 
 
 def cell_display_l(shading, numbers):
