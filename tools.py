@@ -12,7 +12,7 @@ def coordinate_l(width):
     return lambda cell_number: (cell_number % width, cell_number // width)
 
 
-def cell_number_l(width):
+def index_l(width):
     return lambda x, y: x + y * width
 
 

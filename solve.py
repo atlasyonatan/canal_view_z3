@@ -11,10 +11,16 @@ SOLUTION_COUNT = None  # None for all solutions
 WIDTH, HEIGHT = 5, 5
 SIZE = WIDTH * HEIGHT
 print(f"WIDTH = {WIDTH}, HEIGHT = {HEIGHT}")
-coordinate, cell_number = coordinate_l(WIDTH), cell_number_l(WIDTH)
+coordinate, cell_number = coordinate_l(WIDTH), index_l(WIDTH)
 
 CONSTANTS = {
-    # (0, 0): False,
+    (0, 0): 5,
+    (1, 2): 4,
+    (3, 2): 3,
+    (0, 4): 3,
+    (2, 4): 1,
+    (4, 4): 4,
+    
     # (WIDTH - 1, HEIGHT - 1): True,
     # (0, HEIGHT - 1): True,
     # (WIDTH - 1, 0): True,
