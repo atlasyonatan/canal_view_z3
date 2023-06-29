@@ -34,7 +34,6 @@ adjacency_index = md_to_sd(adjacency_pow_shape)
 
 i, j, k, q = Ints("i j k q")
 
-are_shaded = And(board[i], board[j])
 
 abs_z3 = lambda v: If(v >= 0, v, -v)
 x1, y1 = board_coordinate(i)
@@ -103,40 +102,48 @@ adjacency_pow_k = ForAll(
 
 rule_adjacency_pow = simplify(And(adjacency_pow_1, adjacency_pow_k))
 
+are_shaded = And(board[i], board[j])
+rule_connectedness = ForAll(
+    [i, j],
+    Implies(
+        And(i_and_j_in_bounds, k_in_bounds, are_shaded),
+        Exists([k], adjacency_pow[adjacency_index(k, i, j)]),
+    ),
+)
+
 ##########################
 if __name__ == "__main__":
+    from time import time
+
     WIDTH, HEIGHT = 2, 2
 
-    # board_index = md_to_sd((WIDTH, HEIGHT))
     solver = Solver()
 
     solver.add(width == WIDTH)
     solver.add(height == HEIGHT)
     # solver.add(rule_no_2x2)
     solver.add(rule_adjacency_pow)
+    solver.add(rule_connectedness)
 
+    solver.add(board[board_index(0, 0)] == True)
+    solver.add(board[board_index(0, 1)] == False)
+    solver.add(board[board_index(1, 1)] == True)
+    solver.add(board[board_index(1, 0)] == False)
+
+    # solver.set(mbqi = True)
     print(solver.sexpr())
-    # solver.add(board[index(0, 0)] == True)
-    # solver.add(board[index(0, 1)] == True)
-    # solver.add(board[index(1, 0)] == True)
-    # solver.add(board[index(1,1)] == True)
-
+    t = time()
     if solver.check() == unsat:
         print("unsat")
         exit(1)
-
+    print(f"sat: {time() - t:f} seconds")
     model = solver.model()
 
     comp_eval = lambda e: model.eval(e, model_completion=True)
     eval_shape = lambda shape: tuple(map(compose(IntNumRef.as_long, comp_eval), shape))
 
-    # adjacency_shape = tuple(map(comp_eval, adjacency_pow_k_shape[1:]))
-
-    from tools import bool_display, mat_display
+    from tools import mat_display
     import numpy as np
-
-    # eval_bool_mat = np.vectorize(compose(is_true, comp_eval))
-    # eval_int_mat = np.vectorize(lambda e: comp_eval(e).as_long())
 
     board_elements = np.fromfunction(
         np.vectorize(compose(comp_eval, board.__getitem__, board_index)),
@@ -148,14 +155,9 @@ if __name__ == "__main__":
         eval_shape(adjacency_pow_shape),
     )
 
-    # shading = eval_bool_mat(board_elements)
-    # adjacency = eval_int_mat(adjacency_matrix)
-
-    # bool_to_char = np.vectorize(bool_display)
-
     shading = np.vectorize(lambda b: "#" if b else " ")
 
     # print(shading(board_elements))
     mat_display(shading(board_elements))
-    mat_display(shading(adjacency[2]))
+    mat_display(shading(adjacency[0]))
     # print(shading(adjacency))
