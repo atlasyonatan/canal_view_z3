@@ -44,7 +44,6 @@ x2, y2 = coordinate(j)
 are_cardinal_neighbors = Or(
     And(x1 == x2, abs_z3(y1 - y2) == 1), And(y1 == y2, abs_z3(x1 - x2) == 1)
 )
-
 i_and_j_in_bounds = And(
     i >= 0, i < adjacency_pow_shape[1], j >= 0, j < adjacency_pow_shape[1]
 )
