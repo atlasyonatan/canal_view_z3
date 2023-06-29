@@ -39,11 +39,12 @@ adjacency_index = md_to_sd(adjacency_pow_shape)
 i, j, k, q = Ints("i j k q")
 
 abs_z3 = lambda v: If(v >= 0, v, -v)
-difference = abs_z3(i - j)
+x1, y1 = coordinate(i)
+x2, y2 = coordinate(j)
 are_cardinal_neighbors = Or(
-    difference == width,
-    And(difference == 1, abs_z3(i % width - j % height) == 1),
+    And(x1 == x2, abs_z3(y1 - y2) == 1), And(y1 == y2, abs_z3(x1 - x2) == 1)
 )
+
 i_and_j_in_bounds = And(
     i >= 0, i < adjacency_pow_shape[1], j >= 0, j < adjacency_pow_shape[1]
 )
@@ -88,7 +89,8 @@ adjacency_pow_k = ForAll(
     ),
 )
 
-rule_adjacency_pow = And(vector_multiplication_sum_0, vector_multiplication_sum_q, adjacency_pow_1, adjacency_pow_k)
+# rule_adjacency_pow = And(vector_multiplication_sum_0, vector_multiplication_sum_q, adjacency_pow_1, adjacency_pow_k)
+rule_adjacency_pow = And(adjacency_pow_1)
 
 ##########################
 if __name__ == "__main__":
@@ -140,6 +142,6 @@ if __name__ == "__main__":
     shading = eval_bool_mat(board_elements)
     adjacency = eval_int_mat(adjacency_matrix)
 
-    bool_to_char = np.vectorize(bool_display)
-    mat_display(bool_to_char(shading))
-    # mat_display(adjacency)
+    # bool_to_char = np.vectorize(bool_display)
+    # mat_display(bool_to_char(shading))
+    mat_display(adjacency)

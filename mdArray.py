@@ -1,5 +1,8 @@
 from operator import mul
 from itertools import accumulate, starmap
+from z3 import ExprRef
+
+ExprRef.__floordiv__ = lambda self, other: self / other
 
 
 def sd_to_md(shape):
