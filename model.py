@@ -27,23 +27,24 @@ rule_no_2x2 = ForAll(
 
 
 # rule: connectedness
-adjacency_pow = Array("3d-adjacency_pow", IntSort(), IntSort())
+adjacency_pow = Array("3d-adjacency_pow", IntSort(), BoolSort())
 adjacency_pow_shape = (
-    width * width * height * height,
+    width * height,
     width * height,
     width * height,
 )
 adjacency_coordinate = sd_to_md(adjacency_pow_shape)
 adjacency_index = md_to_sd(adjacency_pow_shape)
 
-i, j, k, q = Ints("i j k q")
+i, j, k = Ints("i j k")
 
 abs_z3 = lambda v: If(v >= 0, v, -v)
-difference = abs_z3(i - j)
+x1, y1 = coordinate(i)
+x2, y2 = coordinate(j)
 are_cardinal_neighbors = Or(
-    difference == width,
-    And(difference == 1, abs_z3(i % width - j % height) == 1),
+    And(x1 == x2, abs_z3(y1 - y2) == 1), And(y1 == y2, abs_z3(x1 - x2) == 1)
 )
+
 i_and_j_in_bounds = And(
     i >= 0, i < adjacency_pow_shape[1], j >= 0, j < adjacency_pow_shape[1]
 )
@@ -53,46 +54,49 @@ adjacency_pow_1 = ForAll(
     [i, j],
     Implies(
         i_and_j_in_bounds,
-        adjacency_pow[adjacency_index(1, i, j)] == If(are_cardinal_neighbors, 1, 0),
+        adjacency_pow[adjacency_index(1, i, j)] == are_cardinal_neighbors,
     ),
 )
 
 q = Int("q")
-vector_multiplication_sum = Array("q_sum", IntSort(), IntSort())
-q_in_bounds = And(i >= 1, i < adjacency_pow_shape[1])
+q_in_bounds = And(q >= 0, q < adjacency_pow_shape[1])
+def foo(i,j,k):
+    return Exists([q], And(adjacency_pow[adjacency_index(1,i,q)], adjacency_pow[adjacency_index(k-1,q,j)]))
 
-vector_multiplication = (
-    adjacency_pow[adjacency_index(1, i, q)]
-    * adjacency_pow[adjacency_index(k - 1, q, j)]
-)
-vector_multiplication_sum_0 = vector_multiplication_sum[0] == vector_multiplication
-vector_multiplication_sum_q = ForAll(
-    [q],
-    Implies(
-        q_in_bounds,
-        vector_multiplication_sum[q]
-        == vector_multiplication + vector_multiplication_sum[q - 1],
-    ),
-)
+adjacency_pow_k = ForAll([i,j,k], Implies(And(i_and_j_in_bounds, k_in_bounds, q_in_bounds), adjacency_pow[adjacency_index(k, i, j)] == foo(i,j,k)))
 
-# vector_multiplication_sum = And(
-#     vector_multiplication_sum_0, vector_multiplication_sum_q
+# q = Int("q")
+# vector_multiplication_sum = Array("q_sum", IntSort(), IntSort())
+# q_in_bounds = And(i >= 1, i < adjacency_pow_shape[1])
+
+# vector_multiplication = (
+#     adjacency_pow[adjacency_index(1, i, q)]
+#     * adjacency_pow[adjacency_index(k - 1, q, j)]
+# )
+# vector_multiplication_sum_0 = vector_multiplication_sum[0] == vector_multiplication
+# vector_multiplication_sum_q = ForAll(
+#     [q],
+#     Implies(
+#         q_in_bounds,
+#         vector_multiplication_sum[q]
+#         == vector_multiplication + vector_multiplication_sum[q - 1],
+#     ),
 # )
 
-adjacency_pow_k = ForAll(
-    [k, i, j],
-    Implies(
-        And(i_and_j_in_bounds, k_in_bounds),
-        adjacency_pow[adjacency_index(k, i, j)]
-        == vector_multiplication_sum[adjacency_pow_shape[1] - 1],
-    ),
-)
+# adjacency_pow_k = ForAll(
+#     [k, i, j],
+#     Implies(
+#         And(i_and_j_in_bounds, k_in_bounds),
+#         adjacency_pow[adjacency_index(k, i, j)]
+#         == vector_multiplication_sum[adjacency_pow_shape[1] - 1],
+#     ),
+# )
 
-rule_adjacency_pow = And(vector_multiplication_sum_0, vector_multiplication_sum_q, adjacency_pow_1, adjacency_pow_k)
+rule_adjacency_pow = simplify(And(adjacency_pow_1, adjacency_pow_k))
 
 ##########################
 if __name__ == "__main__":
-    WIDTH, HEIGHT = 3, 3
+    WIDTH, HEIGHT = 4, 4
 
     # board_index = md_to_sd((WIDTH, HEIGHT))
     solver = Solver()
@@ -103,7 +107,7 @@ if __name__ == "__main__":
     solver.add(rule_adjacency_pow)
 
     print(solver.sexpr())
-    solver.add(board[index(0, 0)] == True)
+    # solver.add(board[index(0, 0)] == True)
     # solver.add(board[index(0, 1)] == True)
     # solver.add(board[index(1, 0)] == True)
     # solver.add(board[index(1,1)] == True)
@@ -123,23 +127,28 @@ if __name__ == "__main__":
     from tools import bool_display, mat_display
     import numpy as np
 
-    eval_bool_mat = np.vectorize(compose(is_true, comp_eval))
+    # eval_bool_mat = np.vectorize(compose(is_true, comp_eval))
+    # eval_int_mat = np.vectorize(lambda e: comp_eval(e).as_long())
 
-    eval_int_mat = np.vectorize(lambda e: comp_eval(e).as_long())
+    board_elements = np.fromfunction(np.vectorize(compose(comp_eval, board.__getitem__, ToInt, index)), (WIDTH,HEIGHT))
 
-    board_elements = [[board[index(x, y)] for x in range(WIDTH)] for y in range(HEIGHT)]
+    # adjacency = [
+    #     [
+    #         comp_eval(adjacency_pow[adjacency_index(1, x, y)])
+    #         for x in range(comp_eval(adjacency_pow_shape[1]).as_long())
+    #     ]
+    #     for y in range(comp_eval(adjacency_pow_shape[2]).as_long())
+    # ]
 
-    adjacency_matrix = [
-        [
-            adjacency_pow[adjacency_index(1, x, y)]
-            for x in range(comp_eval(adjacency_pow_shape[1]).as_long())
-        ]
-        for y in range(comp_eval(adjacency_pow_shape[2]).as_long())
-    ]
+    adjacency = np.fromfunction(np.vectorize(compose(comp_eval, adjacency_pow.__getitem__, ToInt, adjacency_index)), (WIDTH * WIDTH,WIDTH*WIDTH,HEIGHT*HEIGHT))
 
-    shading = eval_bool_mat(board_elements)
-    adjacency = eval_int_mat(adjacency_matrix)
+    # shading = eval_bool_mat(board_elements)
+    # adjacency = eval_int_mat(adjacency_matrix)
 
-    bool_to_char = np.vectorize(bool_display)
-    mat_display(bool_to_char(shading))
-    # mat_display(adjacency)
+    # bool_to_char = np.vectorize(bool_display)
+
+    shading = np.vectorize(lambda b: '#' if b else ' ')
+    
+    print(shading(board_elements))
+    mat_display(shading(adjacency[3]))
+    # print(shading(adjacency))

@@ -1,5 +1,10 @@
 from operator import mul
 from itertools import accumulate, starmap
+from functools import partial, reduce
+from z3 import ExprRef
+
+compose = lambda *fs: reduce(lambda f, g: lambda *a, **kw: f(g(*a, **kw)), fs)
+ExprRef.__floordiv__ = lambda self, other : self.__div__(other)
 
 
 def sd_to_md(shape):
