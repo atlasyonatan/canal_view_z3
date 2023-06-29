@@ -44,12 +44,12 @@ are_cardinal_neighbors = Or(
 )
 
 i_and_j_in_bounds = And(i >= 0, i < board_len, j >= 0, j < board_len)
-k_in_bounds = And(k >= 1, k <= board_len)
+k_in_bounds = And(k > 0, k < board_len)
 adjacency_pow_1 = ForAll(
     [i, j],
     Implies(
         i_and_j_in_bounds,
-        adjacency_pow[adjacency_index(1, i, j)] == are_cardinal_neighbors,
+        adjacency_pow[adjacency_index(0, i, j)] == are_cardinal_neighbors,
     ),
 )
 
@@ -58,18 +58,21 @@ q_in_bounds = And(q >= 0, q < board_len)
 exists_path = Exists(
     [q],
     And(
-        adjacency_pow[adjacency_index(1, i, q)],
+        q_in_bounds,
+        adjacency_pow[adjacency_index(0, i, q)],
         adjacency_pow[adjacency_index(k - 1, q, j)],
     ),
 )
 
+
 adjacency_pow_k = ForAll(
     [i, j, k],
     Implies(
-        And(i_and_j_in_bounds, k_in_bounds, q_in_bounds),
+        And(k_in_bounds, i_and_j_in_bounds),
         adjacency_pow[adjacency_index(k, i, j)] == exists_path,
     ),
 )
+
 
 # q = Int("q")
 # vector_multiplication_sum = Array("q_sum", IntSort(), IntSort())
@@ -102,7 +105,7 @@ rule_adjacency_pow = simplify(And(adjacency_pow_1, adjacency_pow_k))
 
 ##########################
 if __name__ == "__main__":
-    WIDTH, HEIGHT = 4, 3
+    WIDTH, HEIGHT = 2, 2
 
     # board_index = md_to_sd((WIDTH, HEIGHT))
     solver = Solver()
@@ -154,5 +157,5 @@ if __name__ == "__main__":
 
     # print(shading(board_elements))
     mat_display(shading(board_elements))
-    mat_display(shading(adjacency[1]))
+    mat_display(shading(adjacency[2]))
     # print(shading(adjacency))
