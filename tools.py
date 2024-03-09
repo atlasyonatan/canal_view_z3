@@ -1,4 +1,4 @@
-from z3 import And, Or, sat
+from z3 import And, Or, sat, If
 
 
 # implement python operators for some z3 objects
@@ -17,7 +17,9 @@ def cell_number_l(width):
 
 
 def z3_bool_mat_mul(mat1, mat2):
-    return lambda i, j: simplify_or([simplify_and(mat1[i][k], mat2[k][j]) for k in range(len(mat1))])
+    return lambda i, j: simplify_or(
+        [simplify_and(mat1[i][k], mat2[k][j]) for k in range(len(mat1))]
+    )
 
 
 def simplify_and(*terms):
@@ -32,6 +34,13 @@ def simplify_or(terms):
         return False
     return Or(a)
 
+def abs(x):
+    return If(x >= 0, x, -x)
+
+def coordinate_in_bounds(coordinate, shape):
+    x, y = coordinate
+    width, height = shape
+    return And(x >= 0, x < width, y >= 0, y < height)
 
 def z3_bool_mat_sum(mats):
     return lambda *index: simplify_or([mat[index] for mat in mats])
@@ -40,7 +49,7 @@ def z3_bool_mat_sum(mats):
 def mat_display(mat):
     height = len(mat[0])
     width = len(mat)
-    print('x', ' '.join([str(x) for x in range(width)]))
+    print("x", " ".join([str(x) for x in range(width)]))
     for y in range(height):
         print(y, end=" ")
         for x in range(width):
@@ -49,7 +58,7 @@ def mat_display(mat):
 
 
 def bool_display(v):
-    return '#' if v else ' '
+    return "#" if v else " "
 
 
 def cell_display_l(shading, numbers):
@@ -82,3 +91,24 @@ def all_smt(s, initial_terms):
                 s.pop()
 
     yield from all_smt_rec(list(initial_terms))
+
+
+def get_cardinal_neighbors(coordinate, shape):
+    x, y = coordinate
+    width, height = shape
+
+    # West
+    if 0 <= x - 1 < width:
+        yield (x - 1, y)
+
+    # East
+    if 0 <= x + 1 < width:
+        yield (x + 1, y)
+
+    # North
+    if 0 <= y + 1 < height:
+        yield (x, y + 1)
+
+    # South
+    if 0 <= y - 1 < height:
+        yield (x, y - 1)
