@@ -35,7 +35,7 @@ shaded_neighbors = Function("shaded_neighbors", Pair, Pair, Bool)
 
 s = Solver()
 
-p1, p2 = Consts(["p1", "p2"], Pair)
+p1, p2 = Consts("p1 p2", Pair)
 # s.add(ForAll([p1, p2], shaded_neighbors(p1, p2) == shaded_neighbors(p2, p1)))
 
 print(s.check())
@@ -49,11 +49,10 @@ are_neighbors = Or(
 s.add(
     ForAll(
         [p1, p2],
-        Implies(
-            are_in_bounds, shaded_neighbors(p1, p2) == And(are_shaded, are_neighbors)
-        ),
+        shaded_neighbors(p1, p2) == And(are_in_bounds, are_shaded, are_neighbors),
     )
 )
+
 
 print(s.check())
 # for x in range(WIDTH):
@@ -90,9 +89,7 @@ print(s.check())
 
 shaded_connected = TransitiveClosure(shaded_neighbors)
 
-s.add(
-    ForAll([p1, p2], Implies(are_in_bounds, are_shaded == shaded_connected(p1, p2)))
-)
+s.add(ForAll([p1, p2], shaded_connected(p1, p2) == And(are_in_bounds, are_shaded)))
 # for i in range(SIZE):
 #     i_coordinates = get_coordinate(i)
 #     i_pair = mk_pair(*i_coordinates)
