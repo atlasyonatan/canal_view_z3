@@ -17,11 +17,12 @@ logging.basicConfig(level=logging.DEBUG)
 # s.add(R(b, c))
 # s.add(Not(TC_R(a, c)))
 # print(s.check())   # produces unsat
+# exit(0)
 # #######################
 
 WIDTH, HEIGHT = 3, 3
 SIZE = WIDTH * HEIGHT
-get_coordinate, get_cell_number = coordinate_l(WIDTH), cell_number_l(WIDTH)
+# get_coordinate, get_cell_number = coordinate_l(WIDTH), cell_number_l(WIDTH)
 
 grid_shape = (WIDTH, HEIGHT)
 
@@ -70,7 +71,7 @@ for c in shaded:
 for c in unshaded:
     s.add(Not(grid(mk_pair(*c))))
 
-s.add(Not(shaded_connected(mk_pair(0,0), mk_pair(2,0))))
+# s.add(Not(shaded_connected(mk_pair(0,0), mk_pair(2,0))))
 
 logging.debug("checking sat")
 t = time()
@@ -106,4 +107,7 @@ mat_display(shading)
 # print(eval_bool_func(shaded_neighbors(i, j)))
 # print(eval_bool_func(shaded_connected(i, j)))
 
-print(eval_bool_func(shaded_neighbors(mk_pair(2, 0), mk_pair(1, 0))))
+print(eval_bool_func(shaded_neighbors(mk_pair(0, 0), mk_pair(1, 0))))
+print(eval_bool_func(shaded_neighbors(mk_pair(1, 0), mk_pair(2, 0))))
+print(eval_bool_func(shaded_neighbors(mk_pair(0, 0), mk_pair(2, 0))))
+print(eval_bool_func(shaded_connected(mk_pair(0, 0), mk_pair(2, 0))))
