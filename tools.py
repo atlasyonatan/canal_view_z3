@@ -34,13 +34,16 @@ def simplify_or(terms):
         return False
     return Or(a)
 
-def abs(x):
+
+def z3_abs(x):
     return If(x >= 0, x, -x)
+
 
 def coordinate_in_bounds(coordinate, shape):
     x, y = coordinate
     width, height = shape
     return And(x >= 0, x < width, y >= 0, y < height)
+
 
 def z3_bool_mat_sum(mats):
     return lambda *index: simplify_or([mat[index] for mat in mats])

@@ -7,16 +7,19 @@ import numpy as np
 logging.basicConfig(level=logging.DEBUG)
 
 # #######################
-# A = IntSort()
+# A = IntSort()  # EnumSort("A", ["Red", "Green"])
 # B = BoolSort()
-# R = Function('R', A, A, B)
+# R = Function("R", A, A, B)
 # TC_R = TransitiveClosure(R)
 # s = Solver()
-# a, b, c = Consts('a b c', A)
+# a, b, c = Consts("a b c", A)
 # s.add(R(a, b))
-# s.add(R(b, c))
-# s.add(Not(TC_R(a, c)))
-# print(s.check())   # produces unsat
+# s.add(Not(R(a, c)))
+# s.add(ForAll([a, b], Not(R(a, b))))
+# s.add(ForAll([a, b], TC_R(a, b)))
+# print(s.check())  # produces unsat
+# m = s.model()
+# print(m.get_interp(TC_R))
 # exit(0)
 # #######################
 
@@ -47,13 +50,14 @@ p1, p2 = Consts("p1 p2", Pair)
 are_in_bounds = And(in_bounds(p1), in_bounds(p2))
 are_shaded = And(grid(p1), grid(p2))
 are_neighbors = Or(
-    And(first(p1) == first(p2), abs(second(p1) - second(p2)) == 1),
-    And(second(p1) == second(p2), abs(first(p1) - first(p2)) == 1),
+    And(first(p1) == first(p2), z3_abs(second(p1) - second(p2)) == 1),
+    And(second(p1) == second(p2), z3_abs(first(p1) - first(p2)) == 1),
 )
 s.add(
     ForAll(
         [p1, p2],
         shaded_neighbors(p1, p2) == And(are_in_bounds, are_shaded, are_neighbors),
+        # shaded_neighbors(p1, p2) == And(are_in_bounds, are_neighbors),
     )
 )
 
@@ -61,9 +65,12 @@ s.add(
 shaded_connected = TransitiveClosure(shaded_neighbors)
 
 # s.add(ForAll([p1, p2], shaded_connected(p1, p2) == And(are_in_bounds, are_shaded)))
+s.add(
+    ForAll([p1, p2], Implies(And(are_in_bounds, are_shaded), shaded_connected(p1, p2)))
+)
 
-shaded = [(0, 0), (1, 0), (2,0)]
-unshaded = []
+shaded = [(0, 0), (2, 0), (0, 1)]
+unshaded = [(1, 0)]
 
 for c in shaded:
     s.add(grid(mk_pair(*c)))
@@ -82,6 +89,13 @@ logging.debug(f"{t1 - t:f} seconds")
 if sat_result == unsat:
     print("We are not SAT D:")
     exit(1)
+
+logging.debug("exporting solver assertions to file:")
+t = time()
+file_name = f"{WIDTH}_{HEIGHT}.smt"
+with open(file_name, "w") as f:
+    f.write(s.to_smt2())
+logging.debug(f"{time() - t:f} seconds")
 
 pair_grid = np.zeros(grid_shape, dtype=ExprRef)
 for index in np.ndindex(*pair_grid.shape):
@@ -107,7 +121,10 @@ mat_display(shading)
 # print(eval_bool_func(shaded_neighbors(i, j)))
 # print(eval_bool_func(shaded_connected(i, j)))
 
-print(eval_bool_func(shaded_neighbors(mk_pair(0, 0), mk_pair(1, 0))))
-print(eval_bool_func(shaded_neighbors(mk_pair(1, 0), mk_pair(2, 0))))
-print(eval_bool_func(shaded_neighbors(mk_pair(0, 0), mk_pair(2, 0))))
-print(eval_bool_func(shaded_connected(mk_pair(0, 0), mk_pair(2, 0))))
+print(eval_bool_func(shaded_neighbors(mk_pair(0, 0), mk_pair(0, 1))))
+print(eval_bool_func(shaded_neighbors(mk_pair(0, 1), mk_pair(0, 0))))
+
+# print(eval_bool_func(shaded_neighbors(mk_pair(0, 0), mk_pair(1, 0))))
+# print(eval_bool_func(shaded_neighbors(mk_pair(1, 0), mk_pair(2, 0))))
+# print(eval_bool_func(shaded_neighbors(mk_pair(0, 0), mk_pair(2, 0))))
+# print(eval_bool_func(shaded_connected(mk_pair(0, 0), mk_pair(2, 0))))
