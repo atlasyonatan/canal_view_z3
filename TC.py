@@ -7,20 +7,20 @@ import numpy as np
 logging.basicConfig(level=logging.DEBUG)
 
 # #######################
-# A = IntSort()  # EnumSort("A", ["Red", "Green"])
-# B = BoolSort()
-# R = Function("R", A, A, B)
-# TC_R = TransitiveClosure(R)
-# s = Solver()
-# a, b, c = Consts("a b c", A)
+A, AConsts = EnumSort("A", [str(i) for i in range(3)])
+B = BoolSort()
+R = Function("R", A, A, B)
+TC_R = TransitiveClosure(R)
+s = Solver()
+a, b, c = Consts("a b c", A)
 # s.add(R(a, b))
 # s.add(Not(R(a, c)))
-# s.add(ForAll([a, b], Not(R(a, b))))
-# s.add(ForAll([a, b], TC_R(a, b)))
-# print(s.check())  # produces unsat
-# m = s.model()
-# print(m.get_interp(TC_R))
-# exit(0)
+s.add(ForAll([a, b], R(a, b) == (A == B)))
+s.add(ForAll([a, b], TC_R(a, b)))
+print(s.check())  # produces unsat
+m = s.model()
+print(m.get_interp(TC_R))
+exit(0)
 # #######################
 
 WIDTH, HEIGHT = 3, 3
