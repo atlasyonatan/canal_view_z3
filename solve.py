@@ -5,10 +5,10 @@ from time import time
 from itertools import islice, accumulate
 import numpy as np
 
-logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=logging.INFO)
 
-SOLUTION_COUNT = 20  # None for all solutions
-WIDTH, HEIGHT = 10, 10
+SOLUTION_COUNT = None  # None for all solutions
+WIDTH, HEIGHT = 5, 5
 SIZE = WIDTH * HEIGHT
 print(f"WIDTH = {WIDTH}, HEIGHT = {HEIGHT}")
 coordinate, cell_number = coordinate_l(WIDTH), cell_number_l(WIDTH)
@@ -18,13 +18,12 @@ CONSTANTS = {
     # (WIDTH - 1, HEIGHT - 1): True,
     # (0, HEIGHT - 1): True,
     # (WIDTH - 1, 0): True,
-    # (4, 1): 6,
-    # (2, 2): 5,
-    # (1, 3): 3,
-    # (3, 4): 3,
-    # (0, 4): 3,
-    # (2, 4): 1,
-    # (4, 4): 4,
+    (0, 0): 5,
+    (0, 4): 3,
+    (2, 4): 1,
+    (1, 2): 4,
+    (3, 2): 3,
+    (4, 4): 4,
 }
 
 s = Solver()
@@ -104,31 +103,6 @@ for key, value in CONSTANTS.items():
         print("The latest constraint caused an unsat D:")
         exit(1)
 
-# logging.debug("constructing: adjacency matrix")
-# t0 = time()
-# adjacency = np.empty((SIZE - 2, SIZE, SIZE), dtype=ExprRef)
-# # the adjacency matrix adjacency[0][i][j] equals 1 when cell#i and cell#j in grid are shaded and connected, otherwise 0
-# for index in np.ndindex(*adjacency[0].shape):
-#     i, j = index
-#     difference = abs(i - j)
-#     cardinal_neighbors = difference == WIDTH or (
-#             difference == 1 and not abs(i % WIDTH - j % WIDTH) != 1)
-#     if cardinal_neighbors:
-#         adjacency[0][i][j] = And(grid[coordinate(i)], grid[coordinate(j)])
-#     else:
-#         adjacency[0][i][j] = False
-# logging.debug(f"{time() - t:f} seconds")
-
-# logging.debug("constructing: adjacency_k")
-# t0 = time()
-
-# # powers of The Adjacency Matrix
-# for k in range(1, adjacency.shape[0]):
-#     mat_mul = z3_bool_mat_mul(adjacency[0], adjacency[k - 1])
-#     for index in np.ndindex(*adjacency[k].shape):
-#         adjacency[k][index] = mat_mul(*index)
-# logging.debug(f"{time() - t:f} seconds")
-
 logging.debug("constructing: shaded path")
 t = time()
 
@@ -137,7 +111,6 @@ Cell, CellConsts = EnumSort("cell", [str(i) for i in range(SIZE)])
 are_shaded_neighbors = Function("are_shaded_neighbors", Cell, Cell, BoolSort())
 
 for i, j in np.ndindex((SIZE, SIZE)):
-    # print(f"i:{i}, j:{j}")
     x1, y1 = coordinate(i)
     x2, y2 = coordinate(j)
     are_neighbors = (x1 == x2 and abs(y1 - y2) == 1) or (y1 == y2 and abs(x1 - x2) == 1)
@@ -156,31 +129,12 @@ t = time()
 for i, j in np.ndindex((SIZE, SIZE)):
     if i != j:
         both_shaded = And(grid[coordinate(i)], grid[coordinate(j)])
-        constraint = shaded_path(CellConsts[i], CellConsts[j]) == both_shaded
-        # print("adding: " + constraint.__repr__())
-        s.add(constraint)
-        # print(s.check())
+        s.add(shaded_path(CellConsts[i], CellConsts[j]) == both_shaded)
 
 logging.debug(f"{time() - t:f} seconds")
 
-# # matrix for the sum of all adjacency^k
-# mat_sum = z3_bool_mat_sum(adjacency)
-# adjacency_k_sum = np.empty(adjacency[0].shape, dtype=ExprRef)
-# for index in np.ndindex(*adjacency_k_sum.shape):
-#     adjacency_k_sum[index] = mat_sum(*index)
-# logging.debug(f"{time() - t:f} seconds")
-
-# logging.debug("constraining: sum of adjacency^k is nonzero for shaded cell pairs")
-# t = time()
-# # constrain the sum of adjacency^k for k in [1..SIZE-1], is positive for all shaded cells
-# for index in np.ndindex(*adjacency_k_sum.shape):
-#     i, j = index
-#     nonzero = adjacency_k_sum[index]
-#     shaded = And(grid[coordinate(i)], grid[coordinate(j)])
-#     s.add(shaded == nonzero)
 t1 = time()
-# logging.debug(f"{t1 - t:f} seconds")
-logging.debug(f"constructing constraints total time: {t1 - ts:f} seconds")
+logging.info(f"constructing constraints total time: {t1 - ts:f} seconds")
 
 logging.debug("finished constraining puzzle rules")
 logging.debug("exporting solver assertions to file:")
@@ -211,14 +165,12 @@ free_terms = [
     grid[index] for index in np.ndindex(*grid.shape) if index not in CONSTANTS
 ]
 solutions = all_smt(s, free_terms)
-# for i, m in enumerate(solutions, start=1):
-#     print(i)
-# exit(0)
 sl = islice(solutions, SOLUTION_COUNT)
 
 t = time()
 for i, m in enumerate(sl, start=1):
-    logging.debug(f"{time() - t:f} seconds")
+    tNow = time()
+    logging.info(f"next solution took: {tNow - t:f} seconds")
     m: ModelRef
     # print(f"are_shaded_neighbors: {m.get_interp(are_shaded_neighbors)}")
     # print(f"transitive closure interp: {m.get_interp(shaded_path)}")
