@@ -8,10 +8,10 @@ import numpy as np
 logging.basicConfig(level=logging.DEBUG)
 
 SOLUTION_COUNT = 20  # None for all solutions
-WIDTH, HEIGHT = 3, 3
+WIDTH, HEIGHT = 1, 1
 SIZE = WIDTH * HEIGHT
 print(f"WIDTH = {WIDTH}, HEIGHT = {HEIGHT}")
-coordinate, cell_number = coordinate_l(WIDTH), cell_number_l(WIDTH)
+get_coordinate, get_cell_number = coordinate_l(WIDTH), cell_number_l(WIDTH)
 
 CONSTANTS = {
     # (0, 0): False,
@@ -35,12 +35,20 @@ t = time()
 
 Cell, CellConsts = EnumSort("cell", [str(i) for i in range(SIZE)])
 
+Coordinate, mk_coordinate, (coordinate_1, coordinate_2) = TupleSort(
+    "coordinate", [IntSort(), IntSort()]
+)
+cell_coordinates = Function("cell_coordinates", Cell, Coordinate)
+
+for index in range(SIZE):
+    x, y = get_coordinate(index)
+    s.add(cell_coordinates(CellConsts[index]) == mk_coordinate(x, y))
 
 shading = Function("shading", Cell, BoolSort())
 
 grid = np.empty((WIDTH, HEIGHT), dtype=ExprRef)
 for index in range(SIZE):
-    x, y = coordinate(index)
+    x, y = get_coordinate(index)
     grid[x][y] = shading(CellConsts[index])
     # shading(CellConsts[index]) = Bool(f"cell_{x}_{y}")
 logging.debug(f"{time() - t:f} seconds")
@@ -119,73 +127,34 @@ for key, value in CONSTANTS.items():
         print("The latest constraint caused an unsat D:")
         exit(1)
 
-# logging.debug("constructing: adjacency matrix")
-# t0 = time()
-# adjacency = np.empty((SIZE - 2, SIZE, SIZE), dtype=ExprRef)
-# # the adjacency matrix adjacency[0][i][j] equals 1 when cell#i and cell#j in grid are shaded and connected, otherwise 0
-# for index in np.ndindex(*adjacency[0].shape):
-#     i, j = index
-#     difference = abs(i - j)
-#     cardinal_neighbors = difference == WIDTH or (
-#             difference == 1 and not abs(i % WIDTH - j % WIDTH) != 1)
-#     if cardinal_neighbors:
-#         adjacency[0][i][j] = And(grid[coordinate(i)], grid[coordinate(j)])
-#     else:
-#         adjacency[0][i][j] = False
-# logging.debug(f"{time() - t:f} seconds")
-
-# logging.debug("constructing: adjacency_k")
-# t0 = time()
-
-# # powers of The Adjacency Matrix
-# for k in range(1, adjacency.shape[0]):
-#     mat_mul = z3_bool_mat_mul(adjacency[0], adjacency[k - 1])
-#     for index in np.ndindex(*adjacency[k].shape):
-#         adjacency[k][index] = mat_mul(*index)
-# logging.debug(f"{time() - t:f} seconds")
-
 logging.debug("constructing: shaded path")
 t = time()
 
-# Cell, CellConsts = EnumSort("cell", [str(i) for i in range(SIZE)])
-
 are_neighbors = Function("are_neighbors", Cell, Cell, BoolSort())
 
-# for i, j in np.ndindex((SIZE, SIZE)):
-#     x1, y1 = coordinate(i)
-#     x2, y2 = coordinate(j)
-#     neighbors = (x1 == x2 and abs(y1 - y2) == 1) or (y1 == y2 and abs(x1 - x2) == 1)
-#     s.add(are_neighbors(grid[x1][y1], grid[x2][y2]) == neighbors)
-
-
-for i, j in np.ndindex((SIZE, SIZE)):
-    x1, y1 = coordinate(i)
-    x2, y2 = coordinate(j)
-    neighbors = (x1 == x2 and abs(y1 - y2) == 1) or (y1 == y2 and abs(x1 - x2) == 1)
-    s.add(are_neighbors(CellConsts[i], CellConsts[j]) == neighbors)
+c1_q, c2_q = Consts("c1_q, c2_q", Cell)
+c1_coordinate_q, c2_coordinate_q = cell_coordinates(c1_q), cell_coordinates(c2_q)
+c1_x_q, c1_y_q = coordinate_1(c1_coordinate_q), coordinate_2(c1_coordinate_q)
+c2_x_q, c2_y_q = coordinate_1(c2_coordinate_q), coordinate_2(c2_coordinate_q)
+same_row_q = c1_y_q == c2_y_q
+neighboring_rows_q = Or(c1_y_q + 1 == c2_y_q, c2_y_q + 1 == c1_y_q)
+same_column_q = c1_x_q == c2_x_q
+neighboring_columns_q = Or(c1_x_q + 1 == c2_x_q, c2_x_q + 1 == c1_x_q)
+are_neighbors_q = Or(
+    And(same_row_q, neighboring_columns_q), And(same_column_q, neighboring_rows_q)
+)
+s.add(ForAll([c1_q, c2_q], are_neighbors(c1_q, c2_q) == are_neighbors_q))
 
 are_shaded_neighbors = Function("are_shaded_neighbors", Cell, Cell, BoolSort())
 
-i_q, j_q = Consts("i_q j_q", Cell)
-both_shaded_q = And(shading(i_q), shading(j_q))
+both_shaded_q = And(shading(c1_q), shading(c2_q))
 s.add(
     ForAll(
-        [i_q, j_q],
-        are_shaded_neighbors(i_q, j_q) == And(are_neighbors(i_q, j_q), both_shaded_q),
+        [c1_q, c2_q],
+        are_shaded_neighbors(c1_q, c2_q)
+        == And(are_neighbors(c1_q, c2_q), both_shaded_q),
     )
 )
-
-
-# for i, j in np.ndindex((SIZE, SIZE)):
-#     # print(f"i:{i}, j:{j}")
-#     x1, y1 = coordinate(i)
-#     x2, y2 = coordinate(j)
-#     are_neighbors = (x1 == x2 and abs(y1 - y2) == 1) or (y1 == y2 and abs(x1 - x2) == 1)
-#     both_shaded = And(grid[coordinate(i)], grid[coordinate(j)])
-#     s.add(
-#         are_shaded_neighbors(CellConsts[i], CellConsts[j])
-#         == And(both_shaded, are_neighbors)
-#     )
 
 shaded_path = TransitiveClosure(are_shaded_neighbors)
 logging.debug(f"{time() - t:f} seconds")
@@ -193,35 +162,14 @@ logging.debug(f"{time() - t:f} seconds")
 logging.debug("constraining: shaded path")
 t = time()
 
-# s.add(ForAll([i_q, j_q], shaded_path(i_q, j_q) == both_shaded_q))
-
 # for i, j in np.ndindex((SIZE, SIZE)):
-#     if i != j:
-#         both_shaded = And(grid[coordinate(i)], grid[coordinate(j)])
-#         constraint = shaded_path(CellConsts[i], CellConsts[j]) == both_shaded
-#         # print("adding: " + constraint.__repr__())
-#         s.add(constraint)
-#         # print(s.check())
+#     c_i, c_j = CellConsts[i], CellConsts[j]
+#     s.add(Implies(And(shading(c_i), shading(c_j)), shaded_path(c_i, c_j)))
+s.add(ForAll([c1_q, c2_q], both_shaded_q == shaded_path(c1_q, c2_q)))
 
 logging.debug(f"{time() - t:f} seconds")
 
-# # matrix for the sum of all adjacency^k
-# mat_sum = z3_bool_mat_sum(adjacency)
-# adjacency_k_sum = np.empty(adjacency[0].shape, dtype=ExprRef)
-# for index in np.ndindex(*adjacency_k_sum.shape):
-#     adjacency_k_sum[index] = mat_sum(*index)
-# logging.debug(f"{time() - t:f} seconds")
-
-# logging.debug("constraining: sum of adjacency^k is nonzero for shaded cell pairs")
-# t = time()
-# # constrain the sum of adjacency^k for k in [1..SIZE-1], is positive for all shaded cells
-# for index in np.ndindex(*adjacency_k_sum.shape):
-#     i, j = index
-#     nonzero = adjacency_k_sum[index]
-#     shaded = And(grid[coordinate(i)], grid[coordinate(j)])
-#     s.add(shaded == nonzero)
 t1 = time()
-# logging.debug(f"{t1 - t:f} seconds")
 logging.debug(f"constructing constraints total time: {t1 - ts:f} seconds")
 
 logging.debug("finished constraining puzzle rules")
@@ -253,16 +201,13 @@ free_terms = [
     grid[index] for index in np.ndindex(*grid.shape) if index not in CONSTANTS
 ]
 solutions = all_smt(s, free_terms)
-# for i, m in enumerate(solutions, start=1):
-#     print(i)
-# exit(0)
 sl = islice(solutions, SOLUTION_COUNT)
 
 t = time()
 for i, m in enumerate(sl, start=1):
     logging.debug(f"{time() - t:f} seconds")
     m: ModelRef
-    print(f"are_shaded_neighbors: {m.get_interp(are_shaded_neighbors)}")
+    # print(f"are_shaded_neighbors: {m.get_interp(are_shaded_neighbors)}")
     # print(f"transitive closure interp: {m.get_interp(shaded_path)}")
     eval_bool_func = np.vectorize(
         lambda expr: is_true(m.eval(expr, model_completion=True))
